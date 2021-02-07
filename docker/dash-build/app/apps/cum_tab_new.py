@@ -11,31 +11,34 @@ from dash.dependencies import Input, Output, State
 import main_app
 from main_app import app
 import plotly.graph_objs as go
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+#from src.connectors import PSQL_connector as db_con
 
-#df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
-#db_con = db_con.PostgresConnector(main_app.DB_HOST, main_app.DB_PASSWORD, main_app.DB_PORT, main_app.DB_USER)
-#cols, data = db_con.get_fetchAll(querylib.GET_RAW_DAILY_RETURN, withColumns=True)
-#df = pd.DataFrame(data, columns=cols)
 
-#df = df.astype({"daily_return": "float64", "timestamp": "int64"})
+last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
-# tickers = df["ticker"].unique()
-# sectors = df["sector"].unique()
-# currencies = df["currency"].unique()
-#
-# date_range = df["timestamp"].values
+tab1_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+
+# tickers = tab1_df["ticker"].unique()
+# sectors = tab1_df["sector"].unique()
+currencies = tab1_df["currency"].unique()
+date_range = tab1_df["timestamp"].values
 
 layout = html.Div([
 
     dcc.Interval(id='tab1-interval-update', interval=3600*1000, n_intervals=0),
-    dbc.Spinner(
-        html.Div(id='tab1-hidden-daily-return-data', style={'display': 'none'}),
-                size="lg", color="primary", type="border", fullscreen=True),
+    dbc.Row([
+        dbc.Col(html.Div(id="tab1-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
+    # dbc.Spinner(
+    #     html.Div(id='tab1-hidden-daily-return-data', style={'display': 'none'}),
+    #             size="lg", color="primary", type="border", fullscreen=True),
 
-
-    dbc.Row(dbc.Col(html.Div(id="tab1-slider",
-             style={"margin-bottom": "50px", "margin-top": "30px"}), width={'size': 10,  "offset": 0, 'order': 1}),
+    dbc.Row(dbc.Col(
+        html.Div(
+            dcc.RangeSlider(id="tab1-slider", step=86400, included=True, allowCross=False),
+            style={"margin-bottom": "50px", "margin-top": "30px"}),
+        width={'size': 10,  "offset": 0, 'order': 1}),
             justify='center', align='center'),
     html.Br(),
     dbc.Row([dbc.Col(
@@ -99,42 +102,57 @@ layout = html.Div([
     ])
 
 
+
+
 @app.callback(
-    Output('tab1-hidden-daily-return-data', 'children'),
+    Output("tab1-last-update-info", 'children'),
     [Input('tab1-interval-update', 'n_intervals')])
 def get_tab1_data(n_intervals):
-    price_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
-    return price_df
+    global tab1_df
+    global last_update_dttm
+    global currencies
+    global date_range
+
+    current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+
+    if (current_dttm - last_update_dttm) > main_app.INTERVAL_DELTA_UPDATE:
+
+        last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+        main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+        tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+        currencies = tab1_df["currency"].unique()
+        date_range = tab1_df["timestamp"].values
+
+    return f"Last update utc dttm {last_update_dttm}"
+
 
 @app.callback(Output('tab1-currency-selector', 'options'),
-              [Input('tab1-hidden-daily-return-data', 'children')])
-def set_currency_selector(main_data):
-    if not main_data:
-        raise PreventUpdate
-    currencies = pd.read_json(main_data)["currency"].unique()
+              [Input('tab1-interval-update', 'n_intervals')])
+def set_currency_selector(n_intervals):
     return [{'label': currency, 'value': currency} for currency in currencies]
 
-@app.callback(Output('tab1-slider', 'children'),
-              [Input('tab1-hidden-daily-return-data', 'children')])
-def create_slider(main_data):
-    if not main_data:
-        raise PreventUpdate
-    date_range = main_app.pd_date_to_timestamp(pd.read_json(main_data)["timestamp"])
-    return main_app.create_date_slider("tab1-slider", date_range)
+@app.callback([Output('tab1-slider', 'min'),
+               Output('tab1-slider', 'max'),
+               Output('tab1-slider', 'value'),
+               Output('tab1-slider', 'marks')],
+              [Input('tab1-interval-update', 'n_intervals')])
+def create_slider(n_intervals):
+    marks = main_app.prepare_slider_marks(date_range)
+
+    return date_range.min(), \
+           date_range.max(), \
+           (date_range.min(), date_range.max()),\
+           marks
+
 
 
 @app.callback(Output('daily-return-table', 'data'),
               [Input('tab1-slider', 'value'),
-               Input('tab1-currency-selector', 'value'),
-               Input('tab1-hidden-daily-return-data', 'children')])
-def update_uprise_table(date_range, currency_options, main_data):
-    if not main_data or not date_range or not currency_options:
+               Input('tab1-currency-selector', 'value')])
+def update_uprise_table(date_range, currency_options):
+    if not date_range or not currency_options:
         raise PreventUpdate
-    df = pd.read_json(main_data)
-    df = df.astype({
-        "timestamp": "int64",
-        "daily_return": "float64"})
-    df['timestamp'] = main_app.pd_date_to_timestamp(df['timestamp'])
+    df = tab1_df
     datetime_min = date_range[0]
     datetime_max = date_range[1]
     chart_df = df[(df['currency'].isin(currency_options)) &
@@ -176,16 +194,11 @@ def set_ticker_options(data):
     [Input('tab1-slider', 'value'),
      Input('tab1-sector-selector', 'value'),
      Input('tab1-ticker-selector', 'value'),
-     Input('tab1-currency-selector', 'value'),
-     Input('tab1-hidden-daily-return-data', 'children')])
-def update_creturn(date_range, sector_selector, ticker_selector, currency_options, main_data):
-    if not main_data or not date_range or not currency_options or not ticker_selector or not sector_selector:
+     Input('tab1-currency-selector', 'value')])
+def update_creturn(date_range, sector_selector, ticker_selector, currency_options):
+    if not date_range or not currency_options or not ticker_selector or not sector_selector:
         raise PreventUpdate
-    df = pd.read_json(main_data)
-    df = df.astype({
-        "timestamp": "int64",
-        "daily_return": "float64"})
-    df['timestamp'] = main_app.pd_date_to_timestamp(df['timestamp']).values
+    df = tab1_df
     datetime_min = date_range[0]
     datetime_max = date_range[1]
 

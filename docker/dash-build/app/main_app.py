@@ -6,9 +6,9 @@ import flask
 import dash
 import dash_auth
 import dash_core_components as dcc
-
+from datetime import datetime, timedelta
 from src.connectors import PSQL_connector as db_con
-from flask_caching import Cache
+#from flask_caching import Cache
 import pandas as pd
 
 ENV_PATH = "./cfg/.env"
@@ -20,7 +20,9 @@ DB_USER = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
 DB_HOST = os.environ["DB_HOST"]
 DB_PORT = os.environ["DB_PORT"]
-USERNAME_PASSWORD_PAIRS = eval(os.environ["USERNAME_PASSWORD_PAIRS"])
+DASH_USERNAME_PASSWORD_PAIRS = eval(os.environ["DASH_USERNAME_PASSWORD_PAIRS"])
+DASH_HEARTBEAT_SEC = os.environ["DASH_HEARTBEAT_SEC"]
+INTERVAL_DELTA_UPDATE = timedelta(minutes=60)
 
 # DASH BUTTONS = https://github.com/plotly/plotly.js/blob/master/src/components/modebar/buttons.js
 # DASH CONFIG_OPTIONS = https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js#L6
@@ -81,26 +83,29 @@ DB_CON = db_con.PostgresConnector(DB_HOST, DB_PASSWORD, DB_PORT, DB_USER)
 #BS = https://www.bootstrapcdn.com/bootswatch/
 server = flask.Flask(__name__)
 app = dash.Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
-auth = dash_auth.BasicAuth(app, USERNAME_PASSWORD_PAIRS)
+auth = dash_auth.BasicAuth(app, DASH_USERNAME_PASSWORD_PAIRS)
 app.config.suppress_callback_exceptions = True
-cache = Cache(app.server, config={
-    'CACHE_TYPE': 'filesystem',
-    'CACHE_DIR': 'cache-directory'
-})
+# cache = Cache(app.server, config={
+#     'CACHE_TYPE': 'filesystem',
+#     'CACHE_DIR': 'cache-directory'
+# })
 
 
-@cache.memoize(timeout=CACHE_TIMEOUT)
+# @cache.memoize(timeout=CACHE_TIMEOUT)
+# def get_data_from_db(query, params=None):
+#     cols, data = DB_CON.get_fetchAll(query, withColumns=True, params=params)
+#     df = pd.DataFrame(data, columns=cols)
+#     return df.to_json()
+
 def get_data_from_db(query, params=None):
     cols, data = DB_CON.get_fetchAll(query, withColumns=True, params=params)
-    df = pd.DataFrame(data, columns=cols)
-    return df.to_json()
+    return pd.DataFrame(data, columns=cols)
 
 def pd_date_to_timestamp(series):
     return series.astype("int64") // 10 ** 9
 
 
-def create_date_slider(slider_id, date_array):
-    step = 86400
+def prepare_slider_marks(date_array, step=86400):
     slider_date_marks = dict()
     for each_timestamp in range(date_array.min(), date_array.max(), step*5):
 
@@ -109,13 +114,4 @@ def create_date_slider(slider_id, date_array):
             "style": {
                 "writing-mode": "vertical-rl",
                 "height": 70}}
-
-    return dcc.RangeSlider(
-        id=slider_id,
-        min=date_array.min(),
-        max=date_array.max(),
-        value=[date_array.min(), date_array.max()],
-        marks=slider_date_marks,
-        step=step,
-        included=True,
-        allowCross=False)
+    return slider_date_marks
