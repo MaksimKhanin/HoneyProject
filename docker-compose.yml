@@ -1,0 +1,63 @@
+version: '3'
+
+######################################################
+# DATABASE SERVICE
+######################################################
+services:
+  psql:
+    build:
+      context: ./docker/psql-build
+    container_name: psql
+    ports:
+      - 5432:5432
+    volumes:
+      - "./mnt/postgres/pg_data:/var/lib/postgresql/data"
+    networks:
+      - net
+
+######################################################
+# AIRFLOW
+######################################################
+
+  airflow:
+    build: 
+      context: ./docker/airflow-build
+    depends_on:
+      - psql
+    restart: always
+    container_name: airflow
+    volumes:
+     - ./mnt/airflow/dags:/usr/local/airflow/dags
+     - ./mnt/airflow/airflow.cfg:/usr/local/airflow/airflow.cfg
+    ports:
+      - 8080:8080
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "airflow", "8080" ]
+      timeout: 45s
+      interval: 60s
+      retries: 10
+    networks:
+      - net
+
+
+  ######################################################
+  # DASH
+  ######################################################
+  dash:
+    build:
+      context: ./docker/dash-build
+    container_name: dash
+    volumes:
+      - ./mnt/dash/code:/code
+    ports:
+      - 8050:8050
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "dash", "8050" ]
+      interval: 45s
+      timeout: 60s
+      retries: 10
+    networks:
+      - net
+
+networks:
+  net:
