@@ -16,14 +16,13 @@ from dash.exceptions import PreventUpdate
 # candles_df = pd.DataFrame(data, columns=cols)
 last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 candles_df = main_app.get_data_from_db(querylib.GET_RAW_CANDLES)
-candles_df = candles_df.astype({
-    "timestamp": "int64",
-    "close": "float64",
-    "open": "float64",
-    "high": "float64",
-    "low": "float64"})
-print(candles_df.dtypes)
-print(candles_df.memory_usage(deep=True))
+candles_df = candles_df.astype({"timestamp": "int64",
+                                "date": "datetime64",
+                                "close": "float64",
+                                "open": "float64",
+                                "high": "float64",
+                                "low": "float64"})
+
 #
 # balance_sheet_df = main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET)
 # cash_flow_df = main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW)
@@ -178,12 +177,12 @@ def get_tab2_data(n_intervals):
 
         last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
         candles_df = main_app.get_data_from_db(querylib.GET_RAW_CANDLES)
-        candles_df = candles_df.astype({
-            "timestamp": "int64",
-            "close": "float64",
-            "open": "float64",
-            "high": "float64",
-            "low": "float64"})
+        candles_df = candles_df.astype({"timestamp": "int64",
+                                        "date": "datetime64",
+                                        "close": "float64",
+                                        "open": "float64",
+                                        "high": "float64",
+                                        "low": "float64"})
         tickers = candles_df["ticker"].unique()
         date_range = candles_df["timestamp"].values
 

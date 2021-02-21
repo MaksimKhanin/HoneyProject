@@ -25,8 +25,6 @@ tab1_df = tab1_df.astype({"daily_return": "float64",
                           #"sector": "category",
                           #"industry": "category",
                           #"name": "category"
-print(tab1_df.dtypes)
-print(tab1_df.memory_usage(deep=True))
 
 currencies = tab1_df["currency"].unique()
 date_range = tab1_df["timestamp"].values
@@ -125,7 +123,7 @@ def get_tab1_data(n_intervals):
                                   #"ticker": "category",
                                   #"sector": "category",
                                   #"industry": "category",
-                                  #"name": "category"
+                                  #"name": "category"})
         currencies = tab1_df["currency"].unique()
         date_range = tab1_df["timestamp"].values
 
@@ -153,7 +151,7 @@ def create_slider(n_intervals):
               [Input('tab1-slider', 'value'),
                Input('tab1-currency-selector', 'value')])
 def update_uprise_table(date_range, currency_options):
-    if not date_range or not currency_options:
+    if not date_range:
         raise PreventUpdate
     df = tab1_df
     datetime_min = date_range[0]
@@ -216,9 +214,7 @@ def update_creturn(date_range, sector_selector, ticker_selector, currency_option
         sector_df = prep_cum_graph(data_df, "sector", sector_selector). \
             rename(columns={"sector": "option"})
 
-    if ticker_df is None and sector_df is None:
-        raise PreventUpdate
-    elif sector_df is None:
+    if sector_df is None:
         cum_df = ticker_df
     elif ticker_df is None:
         cum_df = sector_df
@@ -243,7 +239,6 @@ def update_creturn(date_range, sector_selector, ticker_selector, currency_option
             yaxis={'title': '% return', "fixedrange": True}
         )
     }
-
 
 def prep_cum_graph(data, trace_name, trace_array):
     trace_df = data[data[trace_name].isin(trace_array)]
