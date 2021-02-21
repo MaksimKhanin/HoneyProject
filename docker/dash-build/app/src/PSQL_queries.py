@@ -1,7 +1,44 @@
 GET_RAW_DAILY_PRICES = """
-    SELECT *
+    SELECT 
+        EXTRACT(EPOCH FROM date) AS timestamp, 
+        DATE(date) AS date, 
+        ticker, 
+        open, 
+        high, 
+        low,
+        close,
+        currency,
+        sector,
+        industry,
+        name,
+        ROUND((close /LAG(close, 1) OVER (
+                        PARTITION BY ticker
+                        ORDER BY date
+                        ) - 1) * 100, 4) AS daily_return    
     FROM anl.daily_return
-    WHERE date >= NOW() - INTERVAL '730 DAY'
+    WHERE date BETWEEN %s AND %s
+    ORDER BY date ASC;
+"""
+
+GET_RAW_CANDLES_2 = """
+    SELECT 
+        EXTRACT(EPOCH FROM date) AS timestamp, 
+        DATE(date) AS date, 
+        ticker, 
+        open, 
+        high, 
+        low,
+        close,
+        currency,
+        sector,
+        industry,
+        name,
+        ROUND((close /LAG(close, 1) OVER (
+                        PARTITION BY ticker
+                        ORDER BY date
+                        ) - 1) * 100, 4) AS daily_return    
+    FROM anl.daily_return
+    WHERE date >= NOW() - INTERVAL '{} DAY'
     ORDER BY date ASC;
 """
 

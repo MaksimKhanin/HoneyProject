@@ -6,10 +6,61 @@ import flask
 import dash
 import dash_auth
 import dash_core_components as dcc
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.connectors import PSQL_connector as db_con
+import src.PSQL_queries as querylib
 #from flask_caching import Cache
 import pandas as pd
+
+def query_global_data():
+
+    curr_minutes = datetime.now().minute * 10
+    candle_data = get_data_from_db(querylib.GET_RAW_CANDLES_2.format(curr_minutes))
+    candle_data = candle_data.astype({
+        "timestamp": "int64",
+        "close": "float64",
+        "open": "float64",
+        "high": "float64",
+        "low": "float64",
+        "daily_return": "float64"})
+    tickers = candle_data["ticker"].unique()
+    currencies = candle_data["currency"].unique()
+    date_range = candle_data["timestamp"].values
+    return candle_data, tickers, currencies, date_range
+
+def update_globals():
+    global CANDLE_DATA
+    global LAST_UPDATE_DTTM
+    global TICKERS
+    global DATE_RANGE
+    global CURRENCIES
+
+    current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+
+    if (current_dttm - LAST_UPDATE_DTTM) >= INTERVAL_DELTA_UPDATE:
+
+        LAST_UPDATE_DTTM = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+        CANDLE_DATA, TICKERS, CURRENCIES, DATE_RANGE = query_global_data()
+
+
+def get_data_from_db(query, params=None):
+    cols, data = DB_CON.get_fetchAll(query, withColumns=True, params=params)
+    return pd.DataFrame(data, columns=cols)
+
+def pd_date_to_timestamp(series):
+    return series.astype("int64") // 10 ** 9
+
+
+def prepare_slider_marks(date_array, step=86400):
+    slider_date_marks = dict()
+    for each_timestamp in range(date_array.min(), date_array.max(), step*5):
+
+        slider_date_marks[each_timestamp] = {
+            "label": datetime.fromtimestamp(each_timestamp).strftime("%Y-%m-%d"),
+            "style": {
+                "writing-mode": "vertical-rl",
+                "height": 70}}
+    return slider_date_marks
 
 ENV_PATH = "./cfg/.env"
 load_dotenv(ENV_PATH)
@@ -22,7 +73,7 @@ DB_HOST = os.environ["DB_HOST"]
 DB_PORT = os.environ["DB_PORT"]
 DASH_USERNAME_PASSWORD_PAIRS = eval(os.environ["DASH_USERNAME_PASSWORD_PAIRS"])
 DASH_HEARTBEAT_SEC = os.environ["DASH_HEARTBEAT_SEC"]
-INTERVAL_DELTA_UPDATE = timedelta(minutes=60)
+INTERVAL_DELTA_UPDATE = timedelta(minutes=1)
 
 # DASH BUTTONS = https://github.com/plotly/plotly.js/blob/master/src/components/modebar/buttons.js
 # DASH CONFIG_OPTIONS = https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js#L6
@@ -79,39 +130,22 @@ DASH_COLORS = {
 }
 
 DB_CON = db_con.PostgresConnector(DB_HOST, DB_PASSWORD, DB_PORT, DB_USER)
+LAST_UPDATE_DTTM = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0))) - INTERVAL_DELTA_UPDATE
+CANDLE_DATA, TICKERS, CURRENCIES, DATE_RANGE = query_global_data()
 
 #BS = https://www.bootstrapcdn.com/bootswatch/
 server = flask.Flask(__name__)
 app = dash.Dash(__name__, server=server, external_stylesheets=[dbc.themes.COSMO])
 auth = dash_auth.BasicAuth(app, DASH_USERNAME_PASSWORD_PAIRS)
 app.config.suppress_callback_exceptions = True
+
 # cache = Cache(app.server, config={
 #     'CACHE_TYPE': 'filesystem',
 #     'CACHE_DIR': 'cache-directory'
 # })
-
 
 # @cache.memoize(timeout=CACHE_TIMEOUT)
 # def get_data_from_db(query, params=None):
 #     cols, data = DB_CON.get_fetchAll(query, withColumns=True, params=params)
 #     df = pd.DataFrame(data, columns=cols)
 #     return df.to_json()
-
-def get_data_from_db(query, params=None):
-    cols, data = DB_CON.get_fetchAll(query, withColumns=True, params=params)
-    return pd.DataFrame(data, columns=cols)
-
-def pd_date_to_timestamp(series):
-    return series.astype("int64") // 10 ** 9
-
-
-def prepare_slider_marks(date_array, step=86400):
-    slider_date_marks = dict()
-    for each_timestamp in range(date_array.min(), date_array.max(), step*5):
-
-        slider_date_marks[each_timestamp] = {
-            "label": datetime.fromtimestamp(each_timestamp).strftime("%Y-%m-%d"),
-            "style": {
-                "writing-mode": "vertical-rl",
-                "height": 70}}
-    return slider_date_marks

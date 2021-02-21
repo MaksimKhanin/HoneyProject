@@ -8,28 +8,29 @@ from dash.exceptions import PreventUpdate
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+
 import main_app
 from main_app import app
 import plotly.graph_objs as go
 from datetime import datetime, timezone, timedelta
 #from src.connectors import PSQL_connector as db_con
 
+from main_app import CANDLE_DATA, CURRENCIES, TICKERS, DATE_RANGE, LAST_UPDATE_DTTM
+
 
 last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
-tab1_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
-tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
-
-# tickers = tab1_df["ticker"].unique()
-# sectors = tab1_df["sector"].unique()
-currencies = tab1_df["currency"].unique()
-date_range = tab1_df["timestamp"].values
+# tab1_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+# tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+#
+# currencies = tab1_df["currency"].unique()
+# date_range = tab1_df["timestamp"].values
 
 layout = html.Div([
 
     dcc.Interval(id='tab1-interval-update', interval=3600*1000, n_intervals=0),
-    dbc.Row([
-        dbc.Col(html.Div(id="tab1-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
+    # dbc.Row([
+    #     dbc.Col(html.Div(id="tab1-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
     # dbc.Spinner(
     #     html.Div(id='tab1-hidden-daily-return-data', style={'display': 'none'}),
     #             size="lg", color="primary", type="border", fullscreen=True),
@@ -44,6 +45,7 @@ layout = html.Div([
     dbc.Row([dbc.Col(
     dcc.Checklist(
         id='tab1-currency-selector',
+        options=[{'label': currency, 'value': currency} for currency in CURRENCIES],
         value=["USD"], persistence=True, persistence_type='local',
         labelStyle={'display': 'inline-block'}), width={'size': 3,  "offset": 1, 'order': 1})]),
     html.Br(),
@@ -102,34 +104,32 @@ layout = html.Div([
     ])
 
 
+# @app.callback(
+#     Output("tab1-last-update-info", 'children'),
+#     [Input('tab1-interval-update', 'n_intervals')])
+# def get_tab1_data(n_intervals):
+#     global tab1_df
+#     global last_update_dttm
+#     global currencies
+#     global date_range
+#
+#     current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+#
+#     if (current_dttm - last_update_dttm) > main_app.INTERVAL_DELTA_UPDATE:
+#
+#         last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+#         main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+#         tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+#         currencies = tab1_df["currency"].unique()
+#         date_range = tab1_df["timestamp"].values
+#
+#     return f"Last update utc dttm {last_update_dttm}"
 
 
-@app.callback(
-    Output("tab1-last-update-info", 'children'),
-    [Input('tab1-interval-update', 'n_intervals')])
-def get_tab1_data(n_intervals):
-    global tab1_df
-    global last_update_dttm
-    global currencies
-    global date_range
-
-    current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
-
-    if (current_dttm - last_update_dttm) > main_app.INTERVAL_DELTA_UPDATE:
-
-        last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
-        main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
-        tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
-        currencies = tab1_df["currency"].unique()
-        date_range = tab1_df["timestamp"].values
-
-    return f"Last update utc dttm {last_update_dttm}"
-
-
-@app.callback(Output('tab1-currency-selector', 'options'),
-              [Input('tab1-interval-update', 'n_intervals')])
-def set_currency_selector(n_intervals):
-    return [{'label': currency, 'value': currency} for currency in currencies]
+# @app.callback(Output('tab1-currency-selector', 'options'),
+#               [Input('tab1-interval-update', 'n_intervals')])
+# def set_currency_selector(n_intervals):
+#     return [{'label': currency, 'value': currency} for currency in currencies]
 
 @app.callback([Output('tab1-slider', 'min'),
                Output('tab1-slider', 'max'),
@@ -137,11 +137,11 @@ def set_currency_selector(n_intervals):
                Output('tab1-slider', 'marks')],
               [Input('tab1-interval-update', 'n_intervals')])
 def create_slider(n_intervals):
-    marks = main_app.prepare_slider_marks(date_range)
+    marks = main_app.prepare_slider_marks(DATE_RANGE)
 
-    return date_range.min(), \
-           date_range.max(), \
-           (date_range.min(), date_range.max()),\
+    return DATE_RANGE.min(), \
+           DATE_RANGE.max(), \
+           (DATE_RANGE.min(), DATE_RANGE.max()),\
            marks
 
 
@@ -150,9 +150,9 @@ def create_slider(n_intervals):
               [Input('tab1-slider', 'value'),
                Input('tab1-currency-selector', 'value')])
 def update_uprise_table(date_range, currency_options):
-    if not date_range or not currency_options:
+    if not date_range:
         raise PreventUpdate
-    df = tab1_df
+    df = CANDLE_DATA
     datetime_min = date_range[0]
     datetime_max = date_range[1]
     chart_df = df[(df['currency'].isin(currency_options)) &
@@ -196,9 +196,9 @@ def set_ticker_options(data):
      Input('tab1-ticker-selector', 'value'),
      Input('tab1-currency-selector', 'value')])
 def update_creturn(date_range, sector_selector, ticker_selector, currency_options):
-    if not date_range or not currency_options or not ticker_selector or not sector_selector:
+    if not date_range:
         raise PreventUpdate
-    df = tab1_df
+    df = CANDLE_DATA
     datetime_min = date_range[0]
     datetime_max = date_range[1]
 

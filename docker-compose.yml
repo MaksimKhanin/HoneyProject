@@ -7,6 +7,9 @@ services:
   psql:
     build:
       context: ./docker/psql-build
+    depends_on:
+      - psql
+    restart: always
     container_name: psql
     ports:
       - 5432:5432
@@ -46,6 +49,9 @@ services:
   dash:
     build:
       context: ./docker/dash-build
+    depends_on:
+      - psql
+    restart: always
     container_name: dash
     volumes:
       - ./mnt/dash/code:/code

@@ -163,7 +163,7 @@ layout = html.Div([
 @app.callback(
     Output("tab2-last-update-info", 'children'),
     [Input('tab2-interval-update', 'n_intervals')])
-def get_tab1_data(n_intervals):
+def get_tab2_data(n_intervals):
     global candles_df
     global last_update_dttm
     global tickers

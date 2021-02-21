@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 REQ_CANDLES = "/sandbox/market/candles"
 REQ_STOCKS = "/sandbox/market/stocks"
@@ -13,8 +15,12 @@ class TerminalConnector:
         self.header = {'Authorization': f"Bearer {token}"}
 
     def show_stocks(self):
-        return requests.get(REQ_BASE_URL + REQ_STOCKS,
-                            headers=self.header)
+        response = self.requests_retry_session().get(REQ_BASE_URL + REQ_STOCKS,
+                                                     headers=self.header,
+                                                     timeout=10)
+        # return requests.get(REQ_BASE_URL + REQ_STOCKS,
+        #                     headers=self.header)
+        return response
 
     def show_candle(self, figi, from_dt, end_dt, interval):
 
@@ -36,9 +42,14 @@ class TerminalConnector:
             "interval": interval,
         }
 
-        return requests.get(REQ_BASE_URL + REQ_CANDLES,
-                            params,
-                            headers=self.header)
+        response = self.requests_retry_session().get(REQ_BASE_URL + REQ_CANDLES,
+                                                     params=params,
+                                                     headers=self.header,
+                                                     timeout=10)
+        return response
+        # return requests.get(REQ_BASE_URL + REQ_CANDLES,
+        #                     params,
+        #                     headers=self.header)
 
     def bool_status_return(self, answer_json):
 
@@ -46,4 +57,18 @@ class TerminalConnector:
             return True
         else:
             return False
+
+    @staticmethod
+    def requests_retry_session(retries=3,backoff_factor=0.3,
+                               status_forcelist=(500, 502, 504), session=None):
+
+        session = session or requests.Session()
+        retry = Retry(total=retries, read=retries, connect=retries,
+                      backoff_factor=backoff_factor, status_forcelist=status_forcelist)
+
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
+
 

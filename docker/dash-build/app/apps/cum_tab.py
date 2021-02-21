@@ -1,4 +1,4 @@
-from src.connectors import PSQL_connector as db_con
+#from src.connectors import PSQL_connector as db_con
 import src.PSQL_queries as querylib
 import pandas as pd
 import dash_bootstrap_components as dbc
@@ -11,32 +11,39 @@ from dash.dependencies import Input, Output, State
 import main_app
 from main_app import app
 import plotly.graph_objs as go
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+#from src.connectors import PSQL_connector as db_con
 
-db_con = db_con.PostgresConnector(main_app.DB_HOST, main_app.DB_PASSWORD, main_app.DB_PORT, main_app.DB_USER)
-cols, data = db_con.get_fetchAll(querylib.GET_RAW_DAILY_RETURN, withColumns=True)
-df = pd.DataFrame(data, columns=cols)
 
-df = df.astype({"daily_return": "float64", "timestamp": "int64"})
-
-tickers = df["ticker"].unique()
-sectors = df["sector"].unique()
-currencies = df["currency"].unique()
-
-date_range = df["timestamp"].values
+# last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+#
+# tab1_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+# tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+#
+# currencies = tab1_df["currency"].unique()
+# date_range = tab1_df["timestamp"].values
 
 layout = html.Div([
 
-    dbc.Row(dbc.Col(html.Div(main_app.create_date_slider("tab1-slider", date_range),
-             style={"margin-bottom": "50px", "margin-top": "30px"}), width={'size': 10,  "offset": 0, 'order': 1}),
-            justify='center', align='center'),
+    # dcc.Interval(id='tab1-interval-update', interval=3600*1000, n_intervals=0),
+    dbc.Row([
+        dbc.Col(html.Div(id="tab1-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
+    # dbc.Spinner(
+    #     html.Div(id='tab1-hidden-daily-return-data', style={'display': 'none'}),
+    #             size="lg", color="primary", type="border", fullscreen=True),
+
+    dbc.Row(dbc.Col(
+        html.Div(
+            dcc.RangeSlider(id="tab1-slider", step=86400, included=True, allowCross=False),
+            style={"margin-bottom": "50px", "margin-top": "30px"}),
+        width={'size': 10,  "offset": 0, 'order': 1}),
+        justify='center', align='center'),
     html.Br(),
     dbc.Row([dbc.Col(
-    dcc.Checklist(
-        id='tab1-currency-selector',
-        options=[{'label': currency, 'value': currency} for currency in currencies],
-        value=["USD"], persistence=True, persistence_type='local',
-        labelStyle={'display': 'inline-block'}), width={'size': 3,  "offset": 1, 'order': 1})]),
+        dcc.Checklist(
+            id='tab1-currency-selector',
+            value=["USD"], persistence=True, persistence_type='local',
+            labelStyle={'display': 'inline-block'}), width={'size': 3,  "offset": 1, 'order': 1})]),
     html.Br(),
     dbc.Row(dbc.Col(
         dbc.Spinner(
@@ -47,7 +54,7 @@ layout = html.Div([
                 ],
                 editable=False,              # allow editing of data inside all cells
                 cell_selectable=False,
-                sort_by= {"column_id": "cumulative return", "direction": "asc"},
+                sort_by = [{"column_id": "cumulative return", "direction": "asc"}],
                 filter_action="native",     # allow filtering of data by user ('native') or not ('none')
                 sort_action="native",       # enables data to be sorted per-column by user or not ('none')
                 sort_mode="single",         # sort across 'multi' or 'single' columns
@@ -88,26 +95,86 @@ layout = html.Div([
         dbc.Spinner(
             dcc.Graph(id='cum-return', config=main_app.DEFAULT_GRAPH_CONFIG),
             size="lg", color="primary", type="border", fullscreen=False)
-                    , width={'size': 10,  "offset": 0, 'order': 1}),
+        , width={'size': 10,  "offset": 0, 'order': 1}),
         justify='center', align='center'),
-    ])
+])
+
+
+
+
+# @app.callback(
+#     Output("tab1-interval-update", 'children'),
+#     [Input('tab1-interval-update', 'n_intervals')])
+# def get_tab1_data(n_intervals):
+#     global tab1_df
+#     global last_update_dttm
+#     global currencies
+#     global date_range
+#
+#     current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+#
+#     if (current_dttm - last_update_dttm) > main_app.INTERVAL_DELTA_UPDATE:
+#
+#         last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+#         main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
+#         tab1_df = tab1_df.astype({"daily_return": "float64", "timestamp": "int64"})
+#         currencies = tab1_df["currency"].unique()
+#         date_range = tab1_df["timestamp"].values
+#
+#     return f"Last update utc dttm {last_update_dttm}"
+
+
+# @app.callback(Output('tab1-currency-selector', 'options'),
+#               [Input('index-daily-price-data', 'n_intervals')])
+# def set_currency_selector(n_intervals):
+#     return [{'label': currency, 'value': currency} for currency in currencies]
+
+@app.callback(Output('tab1-currency-selector', 'options'),
+              [State('index-daily-price-data', 'children')])
+def set_currency_selector(raw_data):
+    if not raw_data:
+        raise PreventUpdate
+    currencies = pd.read_json(raw_data)["currency"].unique()
+    return [{'label': currency, 'value': currency} for currency in currencies]
+
+@app.callback([Output('tab1-slider', 'min'),
+               Output('tab1-slider', 'max'),
+               Output('tab1-slider', 'value'),
+               Output('tab1-slider', 'marks')],
+              [State('index-daily-price-data', 'children')])
+def create_slider(raw_data):
+    if not raw_data:
+        raise PreventUpdate
+    date_range = pd.read_json(raw_data)["date"].astype("int64") // 10 ** 9
+
+    marks = main_app.prepare_slider_marks(date_range)
+
+    return date_range.min(), \
+           date_range.max(), \
+           (date_range.min(), date_range.max()), \
+           marks
+
 
 
 @app.callback(Output('daily-return-table', 'data'),
               [Input('tab1-slider', 'value'),
-               Input('tab1-currency-selector', 'value')])
-def update_uprise_table(date_range, currency_options):
-    datetime_min = date_range[0]
-    datetime_max = date_range[1]
+               Input('tab1-currency-selector', 'value')],
+               State('index-daily-price-data', 'children'))
+def update_uprise_table(date_range, currency_options, raw_data):
+    if not date_range and not raw_data:
+        raise PreventUpdate
+    df = pd.read_json(raw_data)
+    datetime_min = pd.to_datetime(date_range[0], unit='s')
+    datetime_max = pd.to_datetime(date_range[1], unit='s')
     chart_df = df[(df['currency'].isin(currency_options)) &
-                  (datetime_min <= df['timestamp']) &
-                  (datetime_max >= df['timestamp'])]
+                  (datetime_min <= df['date']) &
+                  (datetime_max >= df['date'])]
 
     chart_df = chart_df[["ticker", "name", "sector", "industry", "daily_return"]]. \
-        groupby(["ticker", "name", "sector", "industry"]).sum().round(2).\
+        groupby(["ticker", "name", "sector", "industry"]).sum().round(2). \
         sort_values("daily_return", ascending=False).reset_index()
 
-    chart_df = chart_df.rename(columns = {"daily_return": "cumulative return"}).\
+    chart_df = chart_df.rename(columns = {"daily_return": "cumulative return"}). \
         set_index("ticker", drop=False)
 
     return chart_df.to_dict('records')
@@ -124,8 +191,8 @@ def set_sector_options(data):
 
 
 @app.callback(
-        Output('tab1-ticker-selector', 'options'),
-        Input('daily-return-table', 'derived_virtual_data'))
+    Output('tab1-ticker-selector', 'options'),
+    Input('daily-return-table', 'derived_virtual_data'))
 def set_ticker_options(data):
     if not data:
         raise PreventUpdate
@@ -138,14 +205,18 @@ def set_ticker_options(data):
     [Input('tab1-slider', 'value'),
      Input('tab1-sector-selector', 'value'),
      Input('tab1-ticker-selector', 'value'),
-     Input('tab1-currency-selector', 'value')])
-def update_creturn(date_range, sector_selector, ticker_selector, currency_options):
-    datetime_min = date_range[0]
-    datetime_max = date_range[1]
+     Input('tab1-currency-selector', 'value')],
+     State('index-daily-price-data', 'children'))
+def update_creturn(date_range, sector_selector, ticker_selector, currency_options, raw_data):
+    if not date_range:
+        raise PreventUpdate
+    df = pd.read_json(raw_data)
+    datetime_min = pd.to_datetime(date_range[0], unit='s')
+    datetime_max = pd.to_datetime(date_range[1], unit='s')
 
     data_df = df[(df['currency'].isin(currency_options)) &
-                   (datetime_min <= df['timestamp']) &
-                   (datetime_max >= df['timestamp'])]
+                 (datetime_min <= df['date']) &
+                 (datetime_max >= df['date'])]
 
     ticker_df = None
     sector_df = None
@@ -188,8 +259,8 @@ def update_creturn(date_range, sector_selector, ticker_selector, currency_option
 def prep_cum_graph(data, trace_name, trace_array):
     trace_df = data[data[trace_name].isin(trace_array)]
 
-    trace_df = trace_df[["timestamp", "date", trace_name, "daily_return"]]. \
-        groupby(["timestamp", "date", trace_name]).mean().reset_index()
+    trace_df = trace_df[["date", trace_name, "daily_return"]]. \
+        groupby(["date", trace_name]).mean().reset_index()
 
     trace_df["daily_return"] = trace_df["daily_return"].fillna(0)
     trace_df["cum_return"] = trace_df[[trace_name, "daily_return"]].groupby([trace_name]).cumsum()
