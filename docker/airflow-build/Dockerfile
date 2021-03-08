@@ -46,7 +46,8 @@ RUN pip install --upgrade pip && \
 
 # packages needed for dags
 RUN pip install python-dotenv && \
-    pip install flask-bcrypt
+    pip install flask-bcrypt && \
+    pip install scikit-learn
 
 # cfgs needed for dags
 COPY ./logger_cfg.yml ${AIRFLOW_HOME}/logger_cfg.yml

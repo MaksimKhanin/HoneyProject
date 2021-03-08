@@ -463,6 +463,26 @@ INSERT_KEY_METRICS_JSON = """
         );
 """
 
+INSERT_EARNINGS_CALENDAR = """
+    INSERT INTO fmp.earnings_calendar
+        SELECT * 
+        FROM json_populate_recordset(NULL::fmp.earnings_calendar, %s)
+    ON CONFLICT ("symbol", "date", "time") DO UPDATE SET
+        (
+            "eps",
+            "epsEstimated",
+            "revenue",
+            "revenueEstimated"
+        )
+        =
+        (
+            EXCLUDED."eps",
+            EXCLUDED."epsEstimated",
+            EXCLUDED."revenue",
+            EXCLUDED."revenueEstimated"
+        );
+"""
+
 GET_TINK_TICKERS_LIST = """
     SELECT 
         CASE 

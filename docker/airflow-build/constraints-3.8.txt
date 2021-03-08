@@ -347,3 +347,4 @@ yarl==1.6.3
 zdesk==2.7.1
 zipp==3.4.0
 zope.deprecation==4.4.0
+scikit-learn==0.24.1

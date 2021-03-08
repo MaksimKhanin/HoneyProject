@@ -48,6 +48,8 @@ DT_PERIOD_LIMITS_MIN = {
     "day": timedelta(hours=12)
 }
 
+EARNINGS_CALENDAR_RANGE = timedelta(days=30)
+
 ############################
 # FMP global static vars
 ############################
@@ -58,7 +60,9 @@ INSERT_STAT_SQL_LIB = {
     "balance-sheet-statement": queryLib.INSERT_BALANCE_SHEET_JSON,
     "cash-flow-statement": queryLib.INSERT_CASH_FLOWS_JSON,
     "key-metrics": queryLib.INSERT_KEY_METRICS_JSON,
-    "historical-price-full": queryLib.INSERT_FMP_CANDLE_JSON
+    "historical-price-full": queryLib.INSERT_FMP_CANDLE_JSON,
+    "historical/earning_calendar": queryLib.INSERT_EARNINGS_CALENDAR,
+    "earning_calendar": queryLib.INSERT_EARNINGS_CALENDAR
 }
 
 FMP_INTERVAL_TO_STAT = {
@@ -112,6 +116,29 @@ def update_company_profiles(fmp_connector, db_connector):
            insert_sql=queryLib.INSERT_COMPANY_PROFILE_JSON)
     logger.info(f"Update company fmp profile finished")
 
+def upload_company_calendar(fmp_connector, db_connector, stat="historical/earning_calendar"):
+    logger.info(f"Uploading companies' history calendars starts")
+    ticker_array = db_connector.get_fetchAll(queryLib.GET_FMP_TICKERS_LIST)
+    ticker_array = list(map(lambda x: x[0], ticker_array))
+    for each_ticker in ticker_array:
+        logger.info(f"Updating {each_ticker}")
+        _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector,
+               stat=stat, ticker=each_ticker, insert_sql=INSERT_STAT_SQL_LIB[stat])
+
+
+def update_earnings_calendar(fmp_connector, db_connector, stat="earning_calendar"):
+
+    today = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+    fromdt = (today - EARNINGS_CALENDAR_RANGE).date()
+    todt = (today + EARNINGS_CALENDAR_RANGE).date()
+    kwargs = dict()
+    kwargs["stat"] = stat
+    kwargs["insert_sql"] = INSERT_STAT_SQL_LIB[stat]
+    kwargs["from"] = fromdt
+    kwargs["to"] = todt
+
+    logger.info(f"Updating earnings_calendar from = {fromdt} todt = {todt}")
+    _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector, **kwargs)
 
 def update_company_fin_stat(fmp_connector, db_connector, stat, period):
     logger.info(f"Update company fin stats {stat} for period {period} starts")
@@ -147,16 +174,18 @@ def parse_fmp_json(json_data, option="default"):
 
 
 def update_fmp_stat(fmp_connector, db_connector, **kwargs):
-
     stat = kwargs["stat"]
-    ticker = kwargs["ticker"]
     insert_sql = kwargs["insert_sql"]
+    if "ticker" in kwargs:
+        ticker = kwargs["ticker"]
     if "parse_option" in kwargs:
         parse_option = kwargs["parse_option"]
     else:
         parse_option = "default"
-
-    logger.info(f"Requesting {stat} with tickers {ticker}")
+    if "ticker" in kwargs:
+        logger.info(f"Requesting {stat} with tickers {ticker}")
+    else:
+        logger.info(f"Requesting {stat}")
     request = fmp_connector.get_finansials(**kwargs)
     if request.status_code != 200:
         logger.warning(f"FMP Returned bad code {request.status_code}, {request.head}")
@@ -169,6 +198,9 @@ def update_fmp_stat(fmp_connector, db_connector, **kwargs):
 
 def etl_fmp_profiles():
     update_company_profiles(fmp_con, db_con)
+
+def etl_earnings_calendar():
+    update_earnings_calendar(fmp_con, db_con)
 
 
 def etl_fmp_stat(stat, period):

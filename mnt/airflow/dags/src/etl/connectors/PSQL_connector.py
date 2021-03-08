@@ -34,4 +34,12 @@ class PostgresConnector:
                 else:
                     return cursor.fetchall()
 
-
+    # Define function using cursor.executemany() to insert the dataframe
+    def insert_many(self, dataframe, table):
+        connection = self.connection
+        tpls = [tuple(x) for x in dataframe.to_numpy()]
+        cols = ','.join(list(dataframe.columns))
+        sql = "INSERT INTO %s(%s) VALUES(%%s,%%s,%%s,%%s,%%s)" % (table, cols)
+        with connection:
+            with connection.cursor() as cursor:
+                cursor.executemany(sql, tpls)

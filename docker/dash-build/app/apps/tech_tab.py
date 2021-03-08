@@ -23,7 +23,6 @@ candles_df = candles_df.astype({"timestamp": "int64",
                                 "high": "float64",
                                 "low": "float64"})
 
-#
 # balance_sheet_df = main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET)
 # cash_flow_df = main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW)
 # income_statement_df = main_app.get_data_from_db(querylib.GET_COMPANY_INCOMESTATEMENT)
@@ -38,12 +37,8 @@ candles_df = candles_df.astype({"timestamp": "int64",
 # cols, data = db_con.get_fetchAll(querylib.GET_COMPANY_KEYMETRICS, withColumns=True)
 # key_metrics_df = pd.DataFrame(data, columns=cols)
 
-
-
 tickers = candles_df["ticker"].unique()
-
-date_range = candles_df["timestamp"].values.astype(int)
-
+date_range = candles_df["timestamp"]
 
 layout = html.Div([
     dcc.Interval(id='tab2-interval-update', interval=3600*1000, n_intervals=0),
@@ -211,7 +206,6 @@ def create_slider(n_intervals):
            (date_range.min(), date_range.max()), \
            marks
 
-#
 # @app.callback(
 #     Output('tab2-BS-data', 'children'),
 #     [Input('tab2-interval-update', 'n_intervals'),

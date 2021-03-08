@@ -339,6 +339,18 @@ CREATE TABLE IF NOT EXISTS fmp.candles_day (
     PRIMARY KEY("ticker", "time")
 );
 
+DROP TABLE IF EXISTS fmp.earnings_calendar;
+CREATE TABLE IF NOT EXISTS fmp.earnings_calendar (
+    "date" TEXT,
+    "symbol" TEXT,
+    "eps" NUMERIC,
+    "epsEstimated" NUMERIC,
+    "time" TEXT,
+    "revenue" NUMERIC,
+    "revenueEstimated" NUMERIC,
+    PRIMARY KEY("symbol", "date", "time")
+);
+
 DROP TABLE IF EXISTS sys_upd.tink_candle;
 CREATE TABLE IF NOT EXISTS sys_upd.tink_candle (
     "figi" TEXT,
@@ -363,6 +375,16 @@ CREATE TABLE IF NOT EXISTS anl.man_company_profiles (
     "sector" TEXT,
     "industry" TEXT,
     PRIMARY KEY("symbol")
+);
+
+DROP TABLE IF EXISTS anl.ml_ticker_clustering;
+CREATE TABLE IF NOT EXISTS anl.ml_ticker_clustering (
+        "ticker" TEXT,
+        "pca_loading_0" NUMERIC,
+        "pca_loading_1" NUMERIC,
+        "pca_loading_2" NUMERIC,
+        "cluster" TEXT,
+        PRIMARY KEY("ticker")
 );
 
 COPY anl.man_company_profiles("symbol", "sector", "industry")

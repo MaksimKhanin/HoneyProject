@@ -2,7 +2,10 @@ from airflow import DAG
 from airflow.hooks.base_hook import BaseHook
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
+from src.ml import honeyML
+from src.etl import fmp_etl
 
 SLACK_CONN_ID = 'slack-honeyTradingTech'
 
@@ -20,7 +23,89 @@ default_args = {
             "retry_delay": timedelta(minutes=10)
         }
 
+def update_ticker_clusters():
+    honeyML.upload_clustering_df()
+
+def update_earnings_calendar():
+    fmp_etl.etl_earnings_calendar()
+
 with DAG(dag_id="anl_update_daily", schedule_interval=None, default_args=default_args, catchup=False) as dag:
+
+    create_dash_main_table = PostgresOperator(
+        task_id="create_dash_main_table",
+        sql="""
+            CREATE TABLE IF NOT EXISTS anl.dash_main AS (
+            SELECT
+                    dr.timestamp, 
+                    dr.date, 
+                    dr.ticker, 
+                    dr.open, 
+                    dr.high, 
+                    dr.low,
+                    dr.close,
+                    dr.daily_return,               
+                    dr.currency,
+                    dr.sector,
+                    dr.industry,
+                    dr.name,
+                    cl.pca_loading_0,
+                    cl.pca_loading_1,
+                    cl.pca_loading_2,
+                    cl.cluster
+                FROM anl.daily_return AS dr
+                    LEFT JOIN anl.ml_ticker_clustering AS cl
+                        ON dr.ticker = cl.ticker
+                WHERE date >= NOW() - INTERVAL '730 DAY'
+                ORDER BY date ASC          
+            );
+        """
+    )
+
+    drop_dash_main_table = PostgresOperator(
+        task_id="drop_dash_main_table",
+        sql="DROP TABLE IF EXISTS anl.dash_main;"
+    )
+
+    cluster_tickers = PythonOperator(
+        task_id="cluster_tickers",
+        python_callable=update_ticker_clusters
+    )
+
+    earnings_calendar_update = PythonOperator(
+        task_id="earnings_calendar_update",
+        python_callable=update_earnings_calendar
+    )
+
+    anl_drop_calendar = PostgresOperator(
+        task_id="anl_drop_calendar",
+        sql="DROP TABLE IF EXISTS anl.earnings_calendar;"
+    )
+
+    anl_create_calendar = PostgresOperator(
+        task_id="anl_create_calendar",
+        sql="""
+        CREATE TABLE IF NOT EXISTS anl.earnings_calendar AS (
+            SELECT
+                CAST(cal."date" AS DATE) AS date,
+                cal."symbol",
+                cal."time",
+                cal."eps",
+                cal."epsEstimated",
+                cal."revenue",
+                cal."revenueEstimated"
+            FROM fmp.earnings_calendar AS cal
+                INNER JOIN fmp.company_profile AS prof 
+                    ON cal.symbol = prof.symbol
+            WHERE CAST(cal."date" AS DATE) > NOW() - INTERVAL '730 DAY'
+            ORDER BY date ASC  
+        );
+        """
+    )
+
+    truncate_clusters = PostgresOperator(
+        task_id="truncate_clusters",
+        sql="TRUNCATE anl.ml_ticker_clustering;"
+    )
 
     drop_daily_return = PostgresOperator(
         task_id="drop_daily_return",
@@ -513,6 +598,9 @@ drop_cash_flows >> create_cash_flows
 drop_balance_sheet >> create_balance_sheet
 drop_income_statement >> create_income_statement
 drop_key_metrics >> create_key_metrics
+earnings_calendar_update >> anl_drop_calendar >> anl_create_calendar
+drop_key_metrics >> create_key_metrics
 
+create_daily_return >> truncate_clusters >> cluster_tickers >> drop_dash_main_table >> create_dash_main_table
 
-[create_daily_return, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics]  >> sending_slack_notification
+[create_dash_main_table, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, anl_create_calendar]  >> sending_slack_notification

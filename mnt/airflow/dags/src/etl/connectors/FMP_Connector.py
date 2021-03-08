@@ -9,7 +9,7 @@ class FMP_Connector:
     def __init__(self, token):
         self.token = token
 
-    def get_finansials(self, ticker, stat, **kwargs):
+    def get_finansials(self, stat, ticker=None, **kwargs):
 
         """
         stat is in
@@ -23,16 +23,20 @@ class FMP_Connector:
             "enterprise-values",
             "key-metrics",
             "financial-growth",
-            "historical-market-capitalization"
+            "historical-market-capitalization",
+            "earning_calendar"
         """
-        kwargs_allowed = {"limit", "period"}
+        kwargs_allowed = {"limit", "period", "from", "to"}
         params = {"apikey": self.token}
 
         for kwarg in kwargs:
             if kwarg in kwargs_allowed:
                 params[kwarg] = kwargs[kwarg]
 
-        url = f"{REQ_BASE_URL}/{stat}/{ticker}"
+        if ticker:
+            url = f"{REQ_BASE_URL}/{stat}/{ticker}"
+        else:
+            url = f"{REQ_BASE_URL}/{stat}/"
 
         response = self.requests_retry_session().get(url, params=params, timeout=10)
 
