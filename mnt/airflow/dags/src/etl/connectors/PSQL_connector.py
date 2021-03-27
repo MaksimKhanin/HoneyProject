@@ -20,6 +20,7 @@ class PostgresConnector:
         with connection:
             with connection.cursor() as cursor:
                 cursor.execute(query, params)
+                print(params)
                 return cursor.fetchone()
 
     def get_fetchAll(self, query, params=None, withColumns=False):
@@ -39,7 +40,8 @@ class PostgresConnector:
         connection = self.connection
         tpls = [tuple(x) for x in dataframe.to_numpy()]
         cols = ','.join(list(dataframe.columns))
-        sql = "INSERT INTO %s(%s) VALUES(%%s,%%s,%%s,%%s,%%s)" % (table, cols)
+        values_tmplt = "%s,"*len(dataframe.columns)
+        sql = "INSERT INTO %s(%s) VALUES(%s)" % (table, cols, values_tmplt[:-1])
         with connection:
             with connection.cursor() as cursor:
                 cursor.executemany(sql, tpls)

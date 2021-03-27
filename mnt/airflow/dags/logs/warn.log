@@ -1,0 +1,2 @@
+2021-03-08 16:53:19,864 - tink_etl_logger - ERROR - Function <function update_instr_candle_hist at 0x000001523E63B670> failed after 2 retries
+2021-03-08 16:53:19,865 - tink_etl_logger - ERROR - Quering candles for AAN_old from 2021-03-03T00:00:00+00:00 to 2021-03-08T00:00:00+00:00 was unsuccessful

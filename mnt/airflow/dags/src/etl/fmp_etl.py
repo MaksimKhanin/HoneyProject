@@ -62,7 +62,8 @@ INSERT_STAT_SQL_LIB = {
     "key-metrics": queryLib.INSERT_KEY_METRICS_JSON,
     "historical-price-full": queryLib.INSERT_FMP_CANDLE_JSON,
     "historical/earning_calendar": queryLib.INSERT_EARNINGS_CALENDAR,
-    "earning_calendar": queryLib.INSERT_EARNINGS_CALENDAR
+    "earning_calendar": queryLib.INSERT_EARNINGS_CALENDAR,
+    "historical-market-capitalization": queryLib.INSERT_MKT_CAP_HIST
 }
 
 FMP_INTERVAL_TO_STAT = {
@@ -139,6 +140,25 @@ def update_earnings_calendar(fmp_connector, db_connector, stat="earning_calendar
 
     logger.info(f"Updating earnings_calendar from = {fromdt} todt = {todt}")
     _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector, **kwargs)
+
+def update_market_cap(fmp_connector, db_connector, stat="historical-market-capitalization"):
+
+    logger.info(f"Update company {stat} starts")
+    ticker_array = db_connector.get_fetchAll(queryLib.GET_FMP_TICKERS_LIST)
+    ticker_array = list(map(lambda x: x[0], ticker_array))
+
+    for each_ticker in ticker_array:
+        logger.info(f"Updating {each_ticker}")
+        last_update = db_connector.get_row(queryLib.GET_LAST_FIN_METRIC_UPDATE, (each_ticker, stat, "day",))[0]
+        current_date = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+
+        if last_update is None or last_update < (current_date - DT_FIN_STAT_UPDATE_PER):
+            _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector,
+                   stat=stat, ticker=each_ticker, insert_sql=INSERT_STAT_SQL_LIB[stat])
+            db_connector.perform_query(queryLib.UPDATE_COMPANY_FIN_METRIC,
+                                       (each_ticker, stat, "day", current_date.isoformat(),))
+        else:
+            logger.info(f"{each_ticker} was updated recently, so skipping")
 
 def update_company_fin_stat(fmp_connector, db_connector, stat, period):
     logger.info(f"Update company fin stats {stat} for period {period} starts")
@@ -239,3 +259,4 @@ def etl_fmp_candles(interval):
                    stat=stat, ticker=f"{each_ticker}?from={from_date}&to={end_date}", period=None,
                    insert_sql=INSERT_STAT_SQL_LIB[stat].format(tf=interval, ticker=each_ticker), parse_option=stat)
             db_con.perform_query(queryLib.UPDATE_FMP_LAST_CANDLE_UPDATE, (each_ticker, interval, end_dt,))
+

@@ -24,7 +24,8 @@ class FMP_Connector:
             "key-metrics",
             "financial-growth",
             "historical-market-capitalization",
-            "earning_calendar"
+            "earning_calendar",
+            "historical-market-capitalization"
         """
         kwargs_allowed = {"limit", "period", "from", "to"}
         params = {"apikey": self.token}

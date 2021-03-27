@@ -483,6 +483,40 @@ INSERT_EARNINGS_CALENDAR = """
         );
 """
 
+INSERT_MKT_CAP_HIST = """
+    INSERT INTO fmp.market_capitalization
+        SELECT * 
+        FROM json_populate_recordset(NULL::fmp.market_capitalization, %s)
+    ON CONFLICT ("symbol", "date") DO UPDATE SET
+            "marketCap"
+        =
+            EXCLUDED."marketCap";
+"""
+
+# INSERT_ENTERPRISE_VALUES = """
+#     INSERT INTO fmp.enterprise_values
+#         SELECT *
+#         FROM json_populate_recordset(NULL::fmp.enterprise_values, %s)
+#     ON CONFLICT ("symbol", "date") DO UPDATE SET
+#         (
+#             "stockPrice",
+#             "numberOfShares",
+#             "marketCapitalization",
+#             "minusCashAndCashEquivalents",
+#             "addTotalDebt",
+#             "enterpriseValue"
+#         )
+#         =
+#         (
+#             EXCLUDED."stockPrice",
+#             EXCLUDED."numberOfShares",
+#             EXCLUDED."marketCapitalization",
+#             EXCLUDED."minusCashAndCashEquivalents",
+#             EXCLUDED."addTotalDebt",
+#             EXCLUDED."enterpriseValue"
+#         );
+# """
+
 GET_TINK_TICKERS_LIST = """
     SELECT 
         CASE 

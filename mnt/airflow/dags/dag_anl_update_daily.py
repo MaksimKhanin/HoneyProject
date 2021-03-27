@@ -4,7 +4,8 @@ from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
-from src.ml import honeyML
+from src.ml import priceClustering
+from src.ml import stmnt_analyzer
 from src.etl import fmp_etl
 
 SLACK_CONN_ID = 'slack-honeyTradingTech'
@@ -24,7 +25,10 @@ default_args = {
         }
 
 def update_ticker_clusters():
-    honeyML.upload_clustering_df()
+    priceClustering.upload_clustering_df()
+
+def update_stmnt_scores():
+    stmnt_analyzer.upload_stmnt_scores_df("stmnt_binary_class")
 
 def update_earnings_calendar():
     fmp_etl.etl_earnings_calendar()
@@ -71,6 +75,11 @@ with DAG(dag_id="anl_update_daily", schedule_interval=None, default_args=default
         python_callable=update_ticker_clusters
     )
 
+    upload_stmnt_scores = PythonOperator(
+        task_id="upload_stmnt_scores",
+        python_callable=update_stmnt_scores
+    )
+
     earnings_calendar_update = PythonOperator(
         task_id="earnings_calendar_update",
         python_callable=update_earnings_calendar
@@ -106,6 +115,12 @@ with DAG(dag_id="anl_update_daily", schedule_interval=None, default_args=default
         task_id="truncate_clusters",
         sql="TRUNCATE anl.ml_ticker_clustering;"
     )
+
+    truncate_stmnt_scores = PostgresOperator(
+        task_id="truncate_stmnt_scores",
+        sql="TRUNCATE ml.stmnt_scores;"
+    )
+
 
     drop_daily_return = PostgresOperator(
         task_id="drop_daily_return",
@@ -601,6 +616,11 @@ drop_key_metrics >> create_key_metrics
 earnings_calendar_update >> anl_drop_calendar >> anl_create_calendar
 drop_key_metrics >> create_key_metrics
 
+
 create_daily_return >> truncate_clusters >> cluster_tickers >> drop_dash_main_table >> create_dash_main_table
 
-[create_dash_main_table, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, anl_create_calendar]  >> sending_slack_notification
+[create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, create_key_metrics] >> truncate_stmnt_scores >> upload_stmnt_scores
+
+
+[create_dash_main_table, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, anl_create_calendar,
+ upload_stmnt_scores] >> sending_slack_notification

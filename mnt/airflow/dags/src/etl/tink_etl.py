@@ -66,11 +66,14 @@ db_con = db_con.PostgresConnector(DB_HOST, DB_PASSWORD, DB_PORT, DB_USER)
 
 def _retry(func, retry_limit, *args, **kwargs):
     for n_try in range(retry_limit):
-        output = func(*args, **kwargs)
-        if output:
-            return True
-        logger.warning(f"Function {func} on {n_try} retry")
-        time.sleep(30)
+        try:
+            output = func(*args, **kwargs)
+            if output:
+                return True
+            logger.warning(f"Function {func} on {n_try} retry")
+            time.sleep(30)
+        except:
+            continue
     logger.error(f"Function {func} failed after {n_try} retries")
     return False
 
@@ -128,15 +131,16 @@ def update_instr_candle_hist(figi, from_dt, end_dt, interval, t_connector, db_co
 
 def etl_stock_list():
     logger.info("Stock list update starts")
-    _retry(update_stock_list, NM_TRIES, t_con, db_con)
-    logger.critical(f"Stock list update was unsuccessful")
-    raise Exception(f"Stock list update was unsuccessful")
+    if _retry(update_stock_list, NM_TRIES, t_con, db_con):
+        logger.info(f"Stock list update was successful")
+    else:
+        logger.critical(f"Stock list update was unsuccessful")
+        raise Exception(f"Stock list update was unsuccessful")
 
 
 def etl_candles(interval):
     logger.info(f"Candle update for the {interval} starts")
     logger.info("Getting figi list")
-    soft = True
     figi_array = db_con.get_fetchAll(queryLib.GET_FIGI_LIST)
     for each_figi, each_ticker in figi_array:
 
@@ -159,7 +163,7 @@ def etl_candles(interval):
 
         if DT_PERIOD_LIMITS_MIN[interval] < (end_date - from_date):
             logger.info(f"Quering candles for {each_ticker} from {from_dt} to {end_dt} and interval {interval}")
-            if _retry(update_instr_candle_hist, NM_TRIES, soft, each_figi, from_dt, end_dt, interval, t_con, db_con):
+            if _retry(update_instr_candle_hist, NM_TRIES, each_figi, from_dt, end_dt, interval, t_con, db_con):
                 logger.info(f"Got candles for {each_ticker}")
                 db_con.perform_query(queryLib.UPDATE_TINK_LAST_CANDLE_UPDATE, (each_figi, each_ticker, interval, end_dt,))
                 time.sleep(0.5)

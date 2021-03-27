@@ -1,53 +1,12 @@
-import os
-import json
-from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
-import time
+
 from ..etl.connectors import PSQL_connector as db_con
-from ..etl.logger.dag_logger import init_logger
 from sklearn import preprocessing
 from scipy.cluster.hierarchy import linkage, fcluster
 from sklearn.decomposition import PCA
 from . import ml_PSQL_queries as querylib
-
-
+from . import ml_utils
 import pandas as pd
 import numpy as np
-
-############################
-# Defining logger
-############################
-
-logger = init_logger("ml_enrich_logger")
-logger.info("loading local .env")
-
-############################
-# Defining connectors
-############################
-
-load_dotenv()
-
-############################
-# Defining .env
-############################
-
-DB_USER = os.environ["DB_USER"]
-DB_PASSWORD = os.environ["DB_PASSWORD"]
-DB_HOST = os.environ["DB_HOST"]
-DB_PORT = os.environ["DB_PORT"]
-
-NM_TRIES = 3
-
-############################
-# Defining connectors
-############################
-
-logger.info("Defining db connector")
-db_con = db_con.PostgresConnector(DB_HOST, DB_PASSWORD, DB_PORT, DB_USER)
-
-def get_data_from_db(query, params=None):
-    cols, data = db_con.get_fetchAll(query, withColumns=True, params=params)
-    return pd.DataFrame(data, columns=cols)
 
 def df_to_return_matrix(dataframe):
     dataframe = dataframe.astype({"daily_return": "float64"})
@@ -76,12 +35,18 @@ def PCA_matrix(matrix, n_components=10):
                           columns = ["pca_loading_0", "pca_loading_1", "pca_loading_2"])
     return pca_df
 
-def upload_clustering_df():
-    df = st_normilize_dataframe(df_to_return_matrix(get_data_from_db(querylib.GET_DAILY_RETURN)))
+def prep_cluster_df():
+    df = st_normilize_dataframe(df_to_return_matrix(ml_utils.get_data_from_db(querylib.GET_DAILY_RETURN)))
     clusters = hierarchy_cluster(df)
     PCA_loadings = PCA_matrix(df)
-    df_to_upload = PCA_loadings.join(clusters, how='left').reset_index()
-    db_con.insert_many(df_to_upload, "anl.ml_ticker_clustering")
+    return PCA_loadings.join(clusters, how='left').reset_index()
+
+def upload_clustering_df():
+    ml_utils.upload_df_db(prep_cluster_df(), "anl.ml_ticker_clustering")
+
+
+
+
 
 
 
