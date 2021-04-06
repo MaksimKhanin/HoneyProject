@@ -12456,3 +12456,39 @@
 2021-03-27 15:11:06,307 - fmp_etl_logger - INFO - loading local .env
 2021-03-27 15:11:06,308 - fmp_etl_logger - INFO - Defining db connector
 2021-03-27 15:11:06,339 - fmp_etl_logger - INFO - Defining fmp connector
+2021-03-27 17:55:28,811 - tink_etl_logger - INFO - loading local .env
+2021-03-27 17:55:28,812 - tink_etl_logger - INFO - Defining t_connector
+2021-03-27 17:55:28,812 - tink_etl_logger - INFO - Defining db connector
+2021-03-27 17:55:28,852 - fmp_etl_logger - INFO - loading local .env
+2021-03-27 17:55:28,853 - fmp_etl_logger - INFO - Defining db connector
+2021-03-27 17:55:29,668 - fmp_etl_logger - INFO - Defining fmp connector
+2021-03-27 17:56:22,172 - tink_etl_logger - INFO - loading local .env
+2021-03-27 17:56:22,173 - tink_etl_logger - INFO - Defining t_connector
+2021-03-27 17:56:22,173 - tink_etl_logger - INFO - Defining db connector
+2021-03-27 17:56:22,210 - fmp_etl_logger - INFO - loading local .env
+2021-03-27 17:56:22,211 - fmp_etl_logger - INFO - Defining db connector
+2021-03-27 17:56:22,247 - fmp_etl_logger - INFO - Defining fmp connector
+2021-03-28 15:14:27,047 - tink_etl_logger - INFO - loading local .env
+2021-03-28 15:14:27,074 - tink_etl_logger - INFO - Defining t_connector
+2021-03-28 15:14:27,074 - tink_etl_logger - INFO - Defining db connector
+2021-03-28 15:14:27,950 - fmp_etl_logger - INFO - loading local .env
+2021-03-28 15:14:27,951 - fmp_etl_logger - INFO - Defining db connector
+2021-03-28 15:14:27,982 - fmp_etl_logger - INFO - Defining fmp connector
+2021-03-28 15:22:33,077 - tink_etl_logger - INFO - loading local .env
+2021-03-28 15:22:33,080 - tink_etl_logger - INFO - Defining t_connector
+2021-03-28 15:22:33,080 - tink_etl_logger - INFO - Defining db connector
+2021-03-28 15:22:33,888 - fmp_etl_logger - INFO - loading local .env
+2021-03-28 15:22:33,889 - fmp_etl_logger - INFO - Defining db connector
+2021-03-28 15:22:33,907 - fmp_etl_logger - INFO - Defining fmp connector
+2021-03-28 15:28:34,903 - tink_etl_logger - INFO - loading local .env
+2021-03-28 15:28:34,904 - tink_etl_logger - INFO - Defining t_connector
+2021-03-28 15:28:34,904 - tink_etl_logger - INFO - Defining db connector
+2021-03-28 15:28:34,931 - fmp_etl_logger - INFO - loading local .env
+2021-03-28 15:28:34,932 - fmp_etl_logger - INFO - Defining db connector
+2021-03-28 15:28:34,950 - fmp_etl_logger - INFO - Defining fmp connector
+2021-04-05 08:56:06,556 - tink_etl_logger - INFO - loading local .env
+2021-04-05 08:56:06,637 - tink_etl_logger - INFO - Defining t_connector
+2021-04-05 08:56:06,638 - tink_etl_logger - INFO - Defining db connector
+2021-04-05 08:56:07,417 - fmp_etl_logger - INFO - loading local .env
+2021-04-05 08:56:07,418 - fmp_etl_logger - INFO - Defining db connector
+2021-04-05 08:56:07,458 - fmp_etl_logger - INFO - Defining fmp connector

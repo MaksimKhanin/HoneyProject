@@ -64,6 +64,10 @@ print("train accur", accuracy_score(y_pred_train, y_train))
 print("test accur ",accuracy_score(y_pred_test, y_test))
 print(cm_train)
 print(cm_test)
+
+importance = pd.DataFrame(zip(model.feature_importances_, X_train.columns), columns = ["importance", "feature"]).set_index("feature")
+print(importance[importance["importance"]>0.01].sort_values("importance", ascending=False))
+
 #
 model_id = 'stmnt_binary_class'
 #
@@ -81,4 +85,4 @@ print(cm)
 print(stmnt_analyzer.return_stmnt_scores(model_id))
 
 stmnt_analyzer.upload_stmnt_scores_df(model_id)
-priceClustering.upload_clustering_df()
+#priceClustering.upload_clustering_df()

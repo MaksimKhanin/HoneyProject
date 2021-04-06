@@ -10,6 +10,7 @@ import time
 import pandas as pd
 from apps import cum_tab, tech_tab, cluster_tab, fundamentals_tab
 
+
 # from apps import cluster_tab, fundamentals_tab
 import src.PSQL_queries as querylib
 from dash.exceptions import PreventUpdate
@@ -18,7 +19,7 @@ app.layout = html.Div([
     html.H1("Welcome to HoneyDashboard"),
     html.Br(),
     html.Div([
-        dcc.Tabs(id='index-tab-list', value='tab-1', children=[
+        dcc.Tabs(id='index-tab-list', value='tab-4', children=[
             dcc.Tab(label='Trends & Partfolio', value='tab-1'),
             dcc.Tab(label='Tech positioning', value='tab-2'),
             dcc.Tab(label='Clustering & Pair Trading', value='tab-3'),
@@ -62,7 +63,7 @@ def render_content(tab):
 #host="127.0.0.1"
 #host="0.0.0.0"
 if __name__ == '__main__':
-    app.run_server(debug=True, host="0.0.0.0", port=8050)
+    app.run_server(debug=False, host="0.0.0.0", port=8050)
 
 
 

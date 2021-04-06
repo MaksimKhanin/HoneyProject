@@ -159,7 +159,7 @@ def return_stmnt_scores(model_id):
     X = _stmnt_to_Xy(df, return_target=False)
     model = ml_utils.load_model_from_db(model_id)
     df["statement_score"] = model.predict_proba(X)[:, 1].round(4)
-    return df[["symbol", "date", "sector", "statement_score"]]
+    return df[["symbol", "date", "sector", "statement_score"]].drop_duplicates(subset=["symbol", "date"])
 
 def upload_stmnt_scores_df(model_id):
     ml_utils.upload_df_db(return_stmnt_scores(model_id), "ml.stmnt_scores")

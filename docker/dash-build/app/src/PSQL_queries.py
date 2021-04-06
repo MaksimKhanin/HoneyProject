@@ -93,30 +93,53 @@ GET_EARNINGS_CALENDAR = """
     FROM anl.earnings_calendar;
 """
 
-GET_COMPANY_BALANCESHEET = """
-    SELECT
-        *
-    FROM anl.balance_sheet
-    WHERE date >= NOW() - INTERVAL '7300 DAY'
-    ORDER BY date ASC;"""
+GET_COMPANY_STTMNTS = """
+    SELECT *
+    FROM anl.fund_statements
+    WHERE date >= NOW() - INTERVAL '1500 DAY'
+    ORDER BY date ASC;
+"""
 
-GET_COMPANY_CASHFLOW = """
-    SELECT
-        *
-    FROM anl.cash_flows
-    WHERE date >= NOW() - INTERVAL '7300 DAY'
-    ORDER BY date ASC;"""
+GET_STTMNTS_SCORES = """
+    SELECT *
+    FROM ml.stmnt_scores
+    ORDER BY date ASC;
+"""
 
-GET_COMPANY_INCOMESTATEMENT = """
-    SELECT
-        *
-    FROM anl.income_statement
-    WHERE date >= NOW() - INTERVAL '7300 DAY'
-    ORDER BY date ASC;"""
+GET_STTMNTS_SECTOR_SCORES = """
+	SELECT
+		sector,
+		ROUND(AVG(statement_score), 4) AS avg_score
+	FROM ml.stmnt_scores
+	WHERE date >= NOW() - INTERVAL '90 DAY'
+	GROUP BY sector;
+"""
 
-GET_COMPANY_KEYMETRICS = """
-    SELECT
-        *
-    FROM anl.key_metrics
-    WHERE date >= NOW() - INTERVAL '7300 DAY'
-    ORDER BY date ASC;"""
+#
+# GET_COMPANY_BALANCESHEET = """
+#     SELECT
+#         *
+#     FROM anl.balance_sheet
+#     WHERE date >= NOW() - INTERVAL '7300 DAY'
+#     ORDER BY date ASC;"""
+#
+# GET_COMPANY_CASHFLOW = """
+#     SELECT
+#         *
+#     FROM anl.cash_flows
+#     WHERE date >= NOW() - INTERVAL '7300 DAY'
+#     ORDER BY date ASC;"""
+#
+# GET_COMPANY_INCOMESTATEMENT = """
+#     SELECT
+#         *
+#     FROM anl.income_statement
+#     WHERE date >= NOW() - INTERVAL '7300 DAY'
+#     ORDER BY date ASC;"""
+#
+# GET_COMPANY_KEYMETRICS = """
+#     SELECT
+#         *
+#     FROM anl.key_metrics
+#     WHERE date >= NOW() - INTERVAL '7300 DAY'
+#     ORDER BY date ASC;"""
