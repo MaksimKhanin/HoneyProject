@@ -600,6 +600,222 @@ with DAG(dag_id="anl_update_daily", schedule_interval=None, default_args=default
         """
     )
 
+    drop_fund_statements = PostgresOperator(
+        task_id="drop_key_metrics",
+        sql="DROP TABLE IF EXISTS anl.fund_statements;"
+    )
+
+    create_fund_statements = PostgresOperator(
+        task_id="create_fund_statements",
+        sql="""
+        CREATE TABLE IF NOT EXISTS anl.fund_statements AS (
+        SELECT
+            km."symbol",
+            prof."sector",
+            prof."currency",
+            km."period",
+            km."month",
+            km."year",
+            km."date",
+            km."revenuePerShare",
+            km."netIncomePerShare",
+            km."operatingCashFlowPerShare",
+            km."freeCashFlowPerShare",
+            km."cashPerShare",
+            km."bookValuePerShare",
+            km."tangibleBookValuePerShare",
+            km."shareholdersEquityPerShare",
+            km."interestDebtPerShare",
+            km."marketCap",
+            km."enterpriseValue",
+            km."peRatio",
+            km."priceToSalesRatio",
+            km."pocfratio",
+            km."pfcfRatio",
+            km."pbRatio",
+            km."ptbRatio",
+            km."evToSales",
+            km."enterpriseValueOverEBITDA",
+            km."evToOperatingCashFlow",
+            km."evToFreeCashFlow",
+            km."earningsYield",
+            km."freeCashFlowYield",
+            km."debtToEquity",
+            km."debtToAssets",
+            km."netDebtToEBITDA",
+            km."currentRatio",
+            km."interestCoverage",
+            km."incomeQuality",
+            km."dividendYield",
+            km."payoutRatio",
+            km."salesGeneralAndAdministrativeToRevenue",
+            km."researchAndDdevelopementToRevenue",
+            km."intangiblesToTotalAssets",
+            km."capexToOperatingCashFlow",
+            km."capexToRevenue",
+            km."capexToDepreciation",
+            km."stockBasedCompensationToRevenue",
+            km."grahamNumber",
+            km."roic",
+            km."returnOnTangibleAssets",
+            km."grahamNetNet",
+            km."workingCapital",
+            km."tangibleAssetValue",
+            km."netCurrentAssetValue",
+            km."investedCapital",
+            km."averageReceivables",
+            km."averagePayables",
+            km."averageInventory",
+            km."daysSalesOutstanding",
+            km."daysPayablesOutstanding",
+            km."daysOfInventoryOnHand",
+            km."receivablesTurnover",
+            km."payablesTurnover",
+            km."inventoryTurnover",
+            km."roe",
+            km."capexPerShare",
+        
+            bs."cashAndCashEquivalents",
+            bs."shortTermInvestments",
+            bs."cashAndShortTermInvestments",
+            bs."netReceivables",
+            COALESCE(bs."inventory", cf."inventory") AS "inventory",
+            bs."otherCurrentAssets",
+            bs."totalCurrentAssets",
+            bs."propertyPlantEquipmentNet",
+            bs."goodwill",
+            bs."intangibleAssets",
+            bs."goodwillAndIntangibleAssets",
+            bs."longTermInvestments",
+            bs."taxAssets",
+            bs."otherNonCurrentAssets",
+            bs."totalNonCurrentAssets",
+            bs."otherAssets",
+            bs."totalAssets",
+            bs."accountPayables",
+            bs."shortTermDebt",
+            bs."taxPayables",
+            bs."deferredRevenue",
+            bs."otherCurrentLiabilities",
+            bs."totalCurrentLiabilities",
+            bs."longTermDebt",
+            bs."deferredRevenueNonCurrent",
+            bs."deferredTaxLiabilitiesNonCurrent",
+            bs."otherNonCurrentLiabilities",
+            bs."totalNonCurrentLiabilities",
+            bs."otherLiabilities",
+            bs."totalLiabilities",
+            bs."commonStock",
+            bs."retainedEarnings",
+            bs."accumulatedOtherComprehensiveIncomeLoss",
+            bs."othertotalStockholdersEquity",
+            bs."totalStockholdersEquity",
+            bs."totalLiabilitiesAndStockholdersEquity",
+            bs."totalInvestments",
+            bs."totalDebt",
+            bs."netDebt",
+        
+            COALESCE(cf."depreciationAndAmortization", inc."depreciationAndAmortization") AS "depreciationAndAmortization",
+            cf."deferredIncomeTax",
+            cf."stockBasedCompensation",
+            cf."changeInWorkingCapital",
+            cf."accountsReceivables",
+            cf."accountsPayables",
+            cf."otherWorkingCapital",
+            cf."otherNonCashItems",
+            cf."netCashProvidedByOperatingActivities",
+            cf."investmentsInPropertyPlantAndEquipment",
+            cf."acquisitionsNet",
+            cf."purchasesOfInvestments",
+            cf."salesMaturitiesOfInvestments",
+            cf."otherInvestingActivites",
+            cf."netCashUsedForInvestingActivites",
+            cf."debtRepayment",
+            cf."commonStockIssued",
+            cf."commonStockRepurchased",
+            cf."dividendsPaid",
+            cf."otherFinancingActivites",
+            cf."netCashUsedProvidedByFinancingActivities",
+            cf."effectOfForexChangesOnCash",
+            cf."netChangeInCash",
+            cf."cashAtEndOfPeriod",
+            cf."cashAtBeginningOfPeriod",
+            cf."operatingCashFlow",
+            cf."capitalExpenditure",
+            cf."freeCashFlow",
+        
+            inc."revenue",
+            inc."costOfRevenue",
+            inc."grossProfit",
+            inc."grossProfitRatio",
+            inc."researchAndDevelopmentExpenses",
+            inc."generalAndAdministrativeExpenses",
+            inc."sellingAndMarketingExpenses",
+            inc."otherExpenses",
+            inc."operatingExpenses",
+            inc."costAndExpenses",
+            inc."interestExpense",
+            inc."ebitda",
+            inc."ebitdaratio",
+            inc."operatingIncome",
+            inc."operatingIncomeRatio",
+            inc."totalOtherIncomeExpensesNet",
+            inc."incomeBeforeTax",
+            inc."incomeBeforeTaxRatio",
+            inc."incomeTaxExpense",
+            COALESCE(inc."netIncome", cf."netIncome") AS "netIncome",
+            inc."netIncomeRatio",
+            inc."eps",
+            inc."epsdiluted",
+            inc."weightedAverageShsOut",
+            inc."weightedAverageShsOutDil"
+        FROM (
+            SELECT
+                *,
+                date_part('month', date) as month,
+                date_part('year', date) as year
+            FROM anl.key_metrics ) AS km
+            INNER JOIN (
+            SELECT
+                *,
+                date_part('month', date) as month,
+                date_part('year', date) as year
+            FROM anl.balance_sheet) as bs 
+                ON km.symbol = bs.symbol 
+                    AND km.month = bs.month 
+                    AND km.year = bs.year 
+                    AND km.period = bs.period 
+            INNER JOIN (
+            SELECT
+                *,
+                date_part('month', date) as month,
+                date_part('year', date) as year
+            FROM anl.income_statement) as inc 
+                ON km.symbol = inc.symbol 
+                    AND km.month = inc.month 
+                    AND km.year = inc.year 
+                    AND km.period = inc.period 
+            INNER JOIN (
+            SELECT
+                *,
+                date_part('month', date) as month,
+                date_part('year', date) as year
+            FROM anl.cash_flows) as cf 
+                ON km.symbol = cf.symbol 
+                    AND km.month = cf.month 
+                    AND km.year = cf.year 
+                    AND km.period = cf.period 
+            INNER JOIN(
+            SELECT 
+                symbol, 
+                sector,
+                currency
+            FROM fmp.company_profile
+            ) AS prof ON km.symbol = prof.symbol
+        );
+        """
+    )
+
     sending_slack_notification = SlackAPIPostOperator(
         task_id="sending_slack",
         channel=slack_channel,
@@ -619,8 +835,6 @@ drop_key_metrics >> create_key_metrics
 
 create_daily_return >> truncate_clusters >> cluster_tickers >> drop_dash_main_table >> create_dash_main_table
 
-[create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, create_key_metrics] >> truncate_stmnt_scores >> upload_stmnt_scores
+[create_dash_main_table, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, anl_create_calendar] >> drop_fund_statements
 
-
-[create_dash_main_table, create_cash_flows, create_balance_sheet, create_income_statement, create_key_metrics, anl_create_calendar,
- upload_stmnt_scores] >> sending_slack_notification
+drop_fund_statements >> create_fund_statements >> truncate_stmnt_scores >> upload_stmnt_scores >> sending_slack_notification

@@ -1,3 +1,4 @@
 cache-directory
 trash
 .idea
+.env
