@@ -33,55 +33,6 @@ def train_sttmnt_analyzer(X, y):
     model.fit(X, y)
     return model
 
-# def _stmnt_prep_USD():
-#
-#     stmnt_since_date = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0))) - timedelta(days=1095)
-#
-#     # quering data
-#     profiles = ml_utils.get_data_from_db(querylib.QUERY_PROFILES, params=('USD',))
-#     bl = ml_utils.get_data_from_db(querylib.QUERY_BL, params=(stmnt_since_date.isoformat(),))
-#     cf = ml_utils.get_data_from_db(querylib.QUERY_CF, params=(stmnt_since_date.isoformat(),))
-#     inc = ml_utils.get_data_from_db(querylib.QUERY_INC, params=(stmnt_since_date.isoformat(),))
-#     km = ml_utils.get_data_from_db(querylib.QUERY_KM, params=(stmnt_since_date.isoformat(),))
-#
-#     # km and profile joining (filtering by )
-#     km = km.set_index("symbol")
-#     profiles = profiles.set_index("symbol")
-#     km = km.merge(profiles, how='inner', left_index=True, right_index=True).reset_index()
-#
-#     # Cleaning targetData
-#     km_cleaned = _transform_column_types(km[(km["marketCap"]>0)]).fillna(0).sort_values(["date", "symbol"])
-#     km_cleaned = _create_mnth_year(km_cleaned)
-#
-#     km_cleaned = km_cleaned.set_index(["symbol", "year", "month"])
-#
-#     bl_cleaned = _create_mnth_year(_transform_column_types(bl)).fillna(0)
-#     col_to_use = bl_cleaned.columns.difference(km_cleaned.columns)
-#     Xy = km_cleaned.merge(bl_cleaned[col_to_use].set_index(["symbol", "year", "month"]),
-#                           how='inner', left_index=True, right_index=True)
-#
-#     cf_cleaned = _create_mnth_year(_transform_column_types(cf)).fillna(0)
-#     col_to_use = cf_cleaned.columns.difference(Xy.columns)
-#     Xy = Xy.merge(cf_cleaned[col_to_use].set_index(["symbol", "year", "month"]),
-#                   how='inner', left_index=True, right_index=True)
-#
-#     inc_cleaned = _create_mnth_year(_transform_column_types(inc)).fillna(0)
-#     col_to_use = inc_cleaned.columns.difference(Xy.columns)
-#     Xy = Xy.merge(inc_cleaned[col_to_use].set_index(["symbol", "year", "month"]),
-#                   how='inner', left_index=True, right_index=True).reset_index()
-#
-#     for each_col in Xy.columns:
-#         if each_col in NON_FEATURE_COLUMNS:
-#             continue
-#         else:
-#             Xy["ar_1_"+each_col] = (Xy[each_col] - Xy.groupby(["symbol"])[each_col].shift(1)) / Xy.groupby(["symbol"])[each_col].shift(1)
-#
-#     Xy.drop_duplicates(inplace=True)
-#     Xy.replace(-np.inf, -9999, inplace=True)
-#     Xy.replace(np.inf, 9999, inplace=True)
-#     Xy.fillna(0, inplace=True)
-#
-#     return Xy
 
 def _stmnt_prep_USD():
 

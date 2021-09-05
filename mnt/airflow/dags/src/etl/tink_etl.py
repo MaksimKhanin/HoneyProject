@@ -91,6 +91,30 @@ def round_prev_candle(timestamp, interval):
 # Terminal etl functions block
 ############################
 
+def etl_portfolio():
+    logger.info("Portfolio update starts")
+    if _retry(update_portfolio_list, NM_TRIES, t_con, db_con):
+        logger.info(f"Portfolio update was successful")
+    else:
+        logger.critical(f"Portfolio  update was unsuccessful")
+        raise Exception(f"Portfolio  update was unsuccessful")
+
+def update_portfolio_list(t_connector, db_connector):
+    request = t_connector.show_portfolio()
+    if request.status_code != 200:
+        logger.warning(f"Terminal Returned bad code")
+        return False
+    else:
+        portfolio = request.json()
+    if t_connector.bool_status_return(portfolio):
+        portfolio = portfolio["payload"]["positions"]
+        db_connector.perform_query(queryLib.INSERT_PORTFOLIO_JSON, (json.dumps(portfolio),))
+        return True
+    else:
+        logger.error(str(portfolio["payload"]["message"]))
+        return False
+
+
 def update_stock_list(t_connector, db_connector):
     request = t_connector.show_stocks()
     if request.status_code != 200:

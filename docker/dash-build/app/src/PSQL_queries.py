@@ -50,7 +50,13 @@ GET_RAW_CANDLES = """
         open, 
         high, 
         low,
-        close
+        close,
+        sector,
+        industry,
+        z_50_close,
+        return_pred,
+        prob_pred,
+        cluster
     FROM anl.dash_main;"""
 
 GET_RAW_DAILY_RETURN = """
@@ -115,31 +121,33 @@ GET_STTMNTS_SECTOR_SCORES = """
 	GROUP BY sector;
 """
 
-#
-# GET_COMPANY_BALANCESHEET = """
-#     SELECT
-#         *
-#     FROM anl.balance_sheet
-#     WHERE date >= NOW() - INTERVAL '7300 DAY'
-#     ORDER BY date ASC;"""
-#
-# GET_COMPANY_CASHFLOW = """
-#     SELECT
-#         *
-#     FROM anl.cash_flows
-#     WHERE date >= NOW() - INTERVAL '7300 DAY'
-#     ORDER BY date ASC;"""
-#
-# GET_COMPANY_INCOMESTATEMENT = """
-#     SELECT
-#         *
-#     FROM anl.income_statement
-#     WHERE date >= NOW() - INTERVAL '7300 DAY'
-#     ORDER BY date ASC;"""
-#
-# GET_COMPANY_KEYMETRICS = """
-#     SELECT
-#         *
-#     FROM anl.key_metrics
-#     WHERE date >= NOW() - INTERVAL '7300 DAY'
-#     ORDER BY date ASC;"""
+GET_ML_SCORES_FOR_TODAY = """
+    SELECT * FROM anl.last_ml_scores
+"""
+
+GET_PORTFOLIO_SCORES = """
+    SELECT
+        p."ticker",
+        p."instrumentType" AS intrument_type,
+        p."balance",
+        (p."expectedYield" ->> 'currency') AS currency,
+        (p."expectedYield" ->> 'value') ::numeric AS expected_yield,
+        (p."averagePositionPrice" ->> 'value') ::numeric AS average_position_price,
+        s.sector,
+        s.industry,
+        s.z_50_close,
+        s.cluster,
+        s.return_pred,
+        s.prob_pred,
+        s.target_price,
+        s.statement_score
+    FROM tink.portfolio as p
+	    INNER JOIN anl.last_ml_scores as s ON p.ticker = s.ticker;
+"""
+
+GET_STRATEGY_SIGNALS = """
+    SELECT
+        *
+    FROM anl.create_anl_strategy_signals AS src
+	ORDER BY date DESC;
+"""

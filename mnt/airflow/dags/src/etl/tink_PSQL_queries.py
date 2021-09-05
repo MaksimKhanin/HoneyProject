@@ -1,3 +1,32 @@
+
+INSERT_PORTFOLIO_JSON = """
+    INSERT INTO tink.portfolio
+        SELECT *
+        FROM json_populate_recordset(NULL::tink.portfolio, %s)
+    ON CONFLICT ("figi", "ticker") DO UPDATE SET
+        (
+            "isin",
+            "instrumentType",
+            "balance",
+            "lots",
+            "expectedYield",
+            "averagePositionPrice",
+            "name",
+            "blocked"
+        )
+        =
+        (
+        EXCLUDED."isin",
+        EXCLUDED."instrumentType",
+        EXCLUDED."balance",
+        EXCLUDED."lots",
+        EXCLUDED."expectedYield",
+        EXCLUDED."averagePositionPrice",
+        EXCLUDED."name",
+        EXCLUDED."blocked"
+        );
+"""
+
 INSERT_SECURITY_JSON = """
     INSERT INTO tink.security
         SELECT * 

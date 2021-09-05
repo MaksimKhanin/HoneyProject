@@ -29,10 +29,6 @@ sttmt_score_df = sttmt_score_df.astype({"date": "datetime64",
                                         "statement_score": "float64"})
 sttmt_sector_score_df = main_app.get_data_from_db(querylib.GET_STTMNTS_SECTOR_SCORES)
 sttmt_sector_score_df = sttmt_sector_score_df.astype({"avg_score": "float64"})
-# balance_sheet_df = main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET)
-# cash_flow_df = main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW)
-# income_statement_df = main_app.get_data_from_db(querylib.GET_COMPANY_INCOMESTATEMENT)
-# key_metrics_df = main_app.get_data_from_db(querylib.GET_COMPANY_KEYMETRICS)
 
 #CHART OPTIONS
 CHART_EXTRA_OPTIONS = [

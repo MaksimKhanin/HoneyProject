@@ -30,9 +30,17 @@ def get_all_stocks():
 def get_candles_daily():
     tink_etl.etl_candles("day")
 
+def get_portfolio_daily():
+    tink_etl.etl_portfolio()
+
 
 with DAG(dag_id="tink_daily_update", schedule_interval="0 3 * * *", default_args=default_args, catchup=False) as dag:
-    
+
+    get_current_portfolio = PythonOperator(
+        task_id="get_current_portfolio",
+        python_callable=get_portfolio_daily
+    )
+
     terminal_stock_getter = PythonOperator(
             task_id="get_all_tink_stocks",
             python_callable=get_all_stocks
@@ -43,9 +51,9 @@ with DAG(dag_id="tink_daily_update", schedule_interval="0 3 * * *", default_args
             python_callable=get_candles_daily
     )
 
-    trigger_anl_update = TriggerDagRunOperator(
-        task_id="trigger_anl_update",
-        trigger_dag_id="anl_update_daily"
+    trigger_ml_update_daily = TriggerDagRunOperator(
+        task_id="trigger_ml_update_daily",
+        trigger_dag_id="ml_update_daily"
     )
 
     sending_slack_notification = SlackAPIPostOperator(
@@ -55,7 +63,7 @@ with DAG(dag_id="tink_daily_update", schedule_interval="0 3 * * *", default_args
         username="honeySlackApp",
         text="DAG tink_daily_update: DONE",
     )
+
     
 
-terminal_stock_getter >> terminal_candles_daily >> sending_slack_notification
-terminal_candles_daily >> trigger_anl_update
+terminal_stock_getter >> terminal_candles_daily >> get_current_portfolio >> trigger_ml_update_daily >> sending_slack_notification

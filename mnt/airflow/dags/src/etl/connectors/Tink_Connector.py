@@ -2,8 +2,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-REQ_CANDLES = "/sandbox/market/candles"
-REQ_STOCKS = "/sandbox/market/stocks"
+REQ_CANDLES = "/market/candles"
+REQ_STOCKS = "/market/stocks"
+REQ_PORTFOLIO = "/portfolio"
 REQ_BASE_URL = 'https://api-invest.tinkoff.ru/openapi'
 
 
@@ -13,6 +14,12 @@ class TerminalConnector:
         self.token = token
         self.time_delta = time_delta
         self.header = {'Authorization': f"Bearer {token}"}
+
+    def show_portfolio(self):
+        response = self.requests_retry_session().get(REQ_BASE_URL + REQ_PORTFOLIO,
+                                                         headers=self.header,
+                                                         timeout=10)
+        return response
 
     def show_stocks(self):
         response = self.requests_retry_session().get(REQ_BASE_URL + REQ_STOCKS,

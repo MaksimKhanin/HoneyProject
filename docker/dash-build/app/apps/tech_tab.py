@@ -2,6 +2,7 @@ import pandas as pd
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 from dash.dependencies import Input, Output
 from main_app import app
 import main_app
@@ -9,12 +10,17 @@ import plotly.graph_objs as go
 from datetime import datetime, timezone, timedelta
 import src.PSQL_queries as querylib
 from dash.exceptions import PreventUpdate
-#from src.connectors import PSQL_connector as db_con
 
-# db_con = db_con.PostgresConnector(main_app.DB_HOST, main_app.DB_PASSWORD, main_app.DB_PORT, main_app.DB_USER)
-# cols, data = db_con.get_fetchAll(querylib.GET_RAW_CANDLES, withColumns=True)
-# candles_df = pd.DataFrame(data, columns=cols)
 last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
+
+tech_monitoring_df = main_app.get_data_from_db(querylib.GET_ML_SCORES_FOR_TODAY)
+tech_monitoring_df = tech_monitoring_df.astype({"date": "datetime64",
+                                "z_50_close": "float64",
+                                "return_pred": "float64",
+                                "prob_pred": "float64",
+                                "target_price": "float64",
+                                "statement_score": "float64"})
+
 candles_df = main_app.get_data_from_db(querylib.GET_RAW_CANDLES)
 candles_df = candles_df.astype({"timestamp": "int64",
                                 "date": "datetime64",
@@ -23,20 +29,6 @@ candles_df = candles_df.astype({"timestamp": "int64",
                                 "high": "float64",
                                 "low": "float64"})
 
-# balance_sheet_df = main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET)
-# cash_flow_df = main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW)
-# income_statement_df = main_app.get_data_from_db(querylib.GET_COMPANY_INCOMESTATEMENT)
-# key_metrics_df = main_app.get_data_from_db(querylib.GET_COMPANY_KEYMETRICS)
-
-# cols, data = db_con.get_fetchAll(querylib.GET_COMPANY_BALANCESHEET, withColumns=True)
-# balance_sheet_df = pd.DataFrame(data, columns=cols)
-# cols, data = db_con.get_fetchAll(querylib.GET_COMPANY_CASHFLOW, withColumns=True)
-# cash_flow_df = pd.DataFrame(data, columns=cols)
-# cols, data = db_con.get_fetchAll(querylib.GET_COMPANY_INCOMESTATEMENT, withColumns=True)
-# income_statement_df = pd.DataFrame(data, columns=cols)
-# cols, data = db_con.get_fetchAll(querylib.GET_COMPANY_KEYMETRICS, withColumns=True)
-# key_metrics_df = pd.DataFrame(data, columns=cols)
-
 tickers = candles_df["ticker"].unique()
 date_range = candles_df["timestamp"]
 
@@ -44,6 +36,44 @@ layout = html.Div([
     dcc.Interval(id='tab2-interval-update', interval=3600*1000, n_intervals=0),
     dbc.Row([
         dbc.Col(html.Div(id="tab2-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
+
+    html.Br(),
+    dbc.Row(dbc.Col(
+        dbc.Spinner(
+            dash_table.DataTable(
+                id='tech-tab-ml-agg',
+                columns=[
+                    {"name": i, "id": i} for i in ["Date", "Ticker", "Sector",
+                                                   "Cluster", "z_score", "Target Price",
+                                                   "Expected Return", "Trend Score", "Statement Score"]
+                ],
+                editable=False,              # allow editing of data inside all cells
+                cell_selectable=False,
+                sort_by = [{"column_id": "Trend Score", "direction": "desc"}],
+                filter_action="native",     # allow filtering of data by user ('native') or not ('none')
+                sort_action="native",       # enables data to be sorted per-column by user or not ('none')
+                sort_mode="single",         # sort across 'multi' or 'single' columns
+                selected_columns=[],        # ids of columns that user selects
+                selected_rows=[],           # indices of rows that user selects
+                page_action="native",       # all data is passed to the table up-front or not ('none')
+                page_current=0,             # page number that user is on
+                page_size=10,                # number of rows visible per page
+                style_cell={                # ensure adequate header width when text is shorter than cell's text
+                    'minWidth': 95, 'maxWidth': 95, 'width': 95
+                },
+                style_cell_conditional=[    # align text columns to left. By default they are aligned to right
+                    {
+                        'if': {'column_id': c},
+                        'textAlign': 'left'
+                    } for c in ["Date", "Ticker", "Sector", "Statement Score"]
+                ],
+                style_data={                # overflow cells' content into multiple lines
+                    'whiteSpace': 'normal',
+                    'height': 'auto'
+                }), size="lg", color="primary", type="border", fullscreen=False),
+        width={'size': 10,  "offset": 0, 'order': 1}),
+        justify='center', align='center'),
+    html.Br(),
 
     dbc.Row(dbc.Col(
         html.Div(
@@ -165,6 +195,7 @@ def get_tab2_data(n_intervals):
     global last_update_dttm
     global tickers
     global date_range
+    global tech_monitoring_df
 
     current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
@@ -178,21 +209,20 @@ def get_tab2_data(n_intervals):
                                         "open": "float64",
                                         "high": "float64",
                                         "low": "float64"})
+
+        tech_monitoring_df = main_app.get_data_from_db(querylib.GET_ML_SCORES_FOR_TODAY)
+        tech_monitoring_df = tech_monitoring_df.astype({"date": "datetime64",
+                                                        "z_50_close": "float64",
+                                                        "return_pred": "float64",
+                                                        "prob_pred": "float64",
+                                                        "target_price": "float64",
+                                                        "statement_score": "float64"})
+
         tickers = candles_df["ticker"].unique()
         date_range = candles_df["timestamp"].values
 
-        # balance_sheet_df = main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET)
-        # cash_flow_df = main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW)
-        # income_statement_df = main_app.get_data_from_db(querylib.GET_COMPANY_INCOMESTATEMENT)
-        # key_metrics_df = main_app.get_data_from_db(querylib.GET_COMPANY_KEYMETRICS)
 
     return f"Last update utc dttm {last_update_dttm}"
-
-# @app.callback(
-#     Output('tab2-hidden-candles-data', 'children'),
-#     [Input('tab2-interval-update', 'n_intervals')])
-# def get_tab2_candles(n_intervals):
-#     return main_app.get_data_from_db(querylib.GET_RAW_CANDLES)
 
 @app.callback([Output('tab2-slider', 'min'),
                Output('tab2-slider', 'max'),
@@ -206,59 +236,6 @@ def create_slider(n_intervals):
            (date_range.min(), date_range.max()), \
            marks
 
-# @app.callback(
-#     Output('tab2-BS-data', 'children'),
-#     [Input('tab2-interval-update', 'n_intervals'),
-#      Input('tab2-ticker-selector', 'value')])
-# def get_tab2_BS(n_intervals, ticker):
-#     if not ticker:
-#         raise PreventUpdate
-#     return main_app.get_data_from_db(querylib.GET_COMPANY_BALANCESHEET, params=(ticker,))
-#
-# @app.callback(
-#     Output('tab2-CF-data', 'children'),
-#     [Input('tab2-interval-update', 'n_intervals'),
-#      Input('tab2-ticker-selector', 'value')])
-# def get_tab2_CF(n_intervals, ticker):
-#     if not ticker:
-#         raise PreventUpdate
-#     return main_app.get_data_from_db(querylib.GET_COMPANY_CASHFLOW, params=(ticker,))
-#
-# @app.callback(
-#     Output('tab2-INC-data', 'children'),
-#     [Input('tab2-interval-update', 'n_intervals'),
-#      Input('tab2-ticker-selector', 'value')])
-# def get_tab2_INC(n_intervals, ticker):
-#     if not ticker:
-#         raise PreventUpdate
-#     return main_app.get_data_from_db(querylib.GET_COMPANY_INCOMESTATEMENT, params=(ticker,))
-#
-# @app.callback(
-#     Output('tab2-KM-data', 'children'),
-#     [Input('tab2-interval-update', 'n_intervals'),
-#      Input('tab2-ticker-selector', 'value')])
-# def get_tab2_KM(n_intervals, ticker):
-#     if not ticker:
-#         raise PreventUpdate
-#     return main_app.get_data_from_db(querylib.GET_COMPANY_KEYMETRICS, params=(ticker,))
-
-#
-# @app.callback(Output('tab2-slider', 'children'),
-#               [Input('tab2-hidden-candles-data', 'children')])
-# def create_slider(main_data):
-#     if not main_data:
-#         raise PreventUpdate
-#     date_range = main_app.pd_date_to_timestamp(pd.read_json(main_data)["timestamp"])
-#     return main_app.create_date_slider("tab2-slider", date_range)
-
-# @app.callback(
-#     Output('tab2-ticker-selector', 'options'),
-#     [Input('tab2-hidden-candles-data', 'children')])
-# def set_ticker_options(main_data):
-#     if not main_data:
-#         raise PreventUpdate
-#     tickers = pd.read_json(main_data)["ticker"]
-#     return [{'label': i, 'value': i} for i in tickers]
 
 @app.callback(Output('tab2-ticker-selector', 'options'),
               [Input('tab2-interval-update', 'n_intervals')])
@@ -274,127 +251,7 @@ def set_currency_selector(n_intervals):
 def update_chart_info(ticker, mv1, mv2, bb):
     return f"""Ticker = {ticker} Moving averages 1 period = {mv1}; 
     Moving averages 2 period = {mv2} Bbands period = {bb}"""
-#
-# @app.callback(
-#     Output('BS-chart', 'figure'),
-#     [Input('tab2-ticker-selector', 'value'),
-#      Input('metric-BS-selection', 'value'),
-#      Input('period-selection', 'value'),
-#      Input('tab2-BS-data', 'children')])
-# def update_balance_sheet(ticker, metric, period, main_data):
-#     if period or not ticker or not metric:
-#         raise PreventUpdate
-#     df = pd.read_json(main_data)
-#     calc_df = df[(df["symbol"] == ticker) & (df["period"] == period)]
-#
-#     return {
-#         'data': [go.Bar(
-#             x=calc_df["date"],
-#             y=calc_df[metric])],
-#         'layout': go.Layout(showlegend=False,
-#                             xaxis={"fixedrange": True, "type":"date"},
-#                             yaxis={"fixedrange": True},
-#                             height=500)
-#     }
-#
-# @app.callback(
-#     Output('metric-BS-selection', 'options'),
-#     Input('tab2-BS-data', 'children'))
-# def set_ticker_options(data):
-#     if not data:
-#         raise PreventUpdate
-#     metrics = pd.read_json(data).columns.drop(["date", "symbol", "period"])
-#     return [{'label': metric, 'value': metric} for metric in metrics]
-#
-# @app.callback(
-#     Output('CF-chart', 'figure'),
-#     [Input('tab2-ticker-selector', 'value'),
-#      Input('metric-CF-selection', 'value'),
-#      Input('period-selection', 'value'),
-#      Input('tab2-CF-data', 'children')])
-# def update_cash_sheet(ticker, metric, period, main_data):
-#     if not main_data or not period or not ticker or not metric:
-#         raise PreventUpdate
-#     df = pd.read_json(main_data)
-#     calc_df = df[(df["symbol"] == ticker) & (df["period"] == period)]
-#     return {
-#         'data': [go.Bar(
-#             x=calc_df["date"],
-#             y=calc_df[metric])],
-#         'layout': go.Layout(showlegend=False,
-#                             xaxis={"fixedrange": True, "type":"date"},
-#                             yaxis={"fixedrange": True},
-#                             height=500)
-#     }
-#
-# @app.callback(
-#     Output('metric-CF-selection', 'options'),
-#     Input('tab2-CF-data', 'children'))
-# def set_ticker_options(data):
-#     if not data:
-#         raise PreventUpdate
-#     metrics = pd.read_json(data).columns.drop(["date", "symbol", "period"])
-#     return [{'label': metric, 'value': metric} for metric in metrics]
-#
-# @app.callback(
-#     Output('INC-chart', 'figure'),
-#     [Input('tab2-ticker-selector', 'value'),
-#      Input('metric-INC-selection', 'value'),
-#      Input('period-selection', 'value'),
-#      Input('tab2-INC-data', 'children')])
-# def update_income_sheet(ticker, metric, period, main_data):
-#     if not main_data or not period or not ticker or not metric:
-#         raise PreventUpdate
-#     df = pd.read_json(main_data)
-#     calc_df = df[(df["symbol"] == ticker) & (df["period"] == period)]
-#     return {
-#         'data': [go.Bar(
-#             x=calc_df["date"],
-#             y=calc_df[metric])],
-#         'layout': go.Layout(showlegend=False,
-#                             xaxis={"fixedrange": True, "type":"date"},
-#                             yaxis={"fixedrange": True},
-#                             height=500)
-#     }
-#
-# @app.callback(
-#     Output('metric-INC-selection', 'options'),
-#     Input('tab2-INC-data', 'children'))
-# def set_ticker_options(data):
-#     if not data:
-#         raise PreventUpdate
-#     metrics = pd.read_json(data).columns.drop(["date", "symbol", "period"])
-#     return [{'label': metric, 'value': metric} for metric in metrics]
-#
-# @app.callback(
-#     Output('KM-chart', 'figure'),
-#     [Input('tab2-ticker-selector', 'value'),
-#      Input('metric-KM-selection', 'value'),
-#      Input('period-selection', 'value'),
-#      Input('tab2-KM-data', 'children')])
-# def update_income_sheet(ticker, metric, period, main_data):
-#     if not main_data or not period or not ticker or not metric:
-#         raise PreventUpdate
-#     df = pd.read_json(main_data)
-#     calc_df = df[(df["symbol"] == ticker) & (df["period"] == period)]
-#     return {
-#         'data': [go.Bar(
-#             x=calc_df["date"],
-#             y=calc_df[metric])],
-#         'layout': go.Layout(showlegend=False,
-#                             xaxis={"fixedrange": True, "type": "date"},
-#                             yaxis={"fixedrange": True},
-#                             height=500)
-#     }
-#
-# @app.callback(
-#     Output('metric-KM-selection', 'options'),
-#     Input('tab2-KM-data', 'children'))
-# def set_ticker_options(data):
-#     if not data:
-#         raise PreventUpdate
-#     metrics = pd.read_json(data).columns.drop(["date", "symbol", "period"])
-#     return [{'label': metric, 'value': metric} for metric in metrics]
+
 
 @app.callback(
     Output('candle-chart', 'figure'),
@@ -546,3 +403,30 @@ def update_graph(ticker, date_range, mv1, mv2, bb):
                     name="Bbands x3 lower")]
         )
     return chart
+
+@app.callback(Output('tech-tab-ml-agg', 'data'),
+              [Input('tab2-interval-update', 'n_intervals')])
+def update_stmnts_score_table(n_intervals):
+    chart_df = tech_monitoring_df
+
+    chart_df["statement_score"] = chart_df["statement_score"].round(2)
+    # chart_df["date"] = pd.to_datetime(chart_df["date"]).dt.strftime('%Y-%m-%d')
+    chart_df = chart_df.rename(columns = {
+        "ticker": "Ticker",
+        "sector": "Sector",
+        "date": "Date",
+        "z_50_close": "z_score",
+        "cluster": "Cluster",
+        "return_pred": "Expected Return",
+        "target_price": "Target Price",
+        "statement_score": "Statement Score",
+        "prob_pred": "Trend Score"
+
+    })
+
+    chart_df["z_score"] = chart_df["z_score"].round(2)
+    chart_df["Expected Return"] = chart_df["Expected Return"].round(2)
+    chart_df["Trend Score"] = chart_df["Trend Score"].round(2)
+    chart_df["Statement Score"] = chart_df["Statement Score"].round(2)
+
+    return chart_df.to_dict('records')

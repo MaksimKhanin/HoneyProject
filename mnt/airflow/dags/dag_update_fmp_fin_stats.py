@@ -3,6 +3,7 @@ from airflow.hooks.base_hook import BaseHook
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.slack_operator import SlackAPIPostOperator
 from airflow.operators.postgres_operator import PostgresOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from datetime import datetime, timedelta
 from src.etl import fmp_etl
 
@@ -117,6 +118,11 @@ with DAG(dag_id="fmp_stat_update", schedule_interval="0 5 * * 6", default_args=d
                 );"""
     )
 
+    trigger_ml_update_weekly = TriggerDagRunOperator(
+        task_id="trigger_ml_update_weekly",
+        trigger_dag_id="ml_update_weekly"
+    )
+
 drop_fmp_x_tink_dict >> create_fmp_x_tink_dict >> fmp_profiles_getter
 
 fmp_profiles_getter >> [fmp_stat_income_y, 
@@ -126,5 +132,5 @@ fmp_profiles_getter >> [fmp_stat_income_y,
                         fmp_stat_income_q, 
                         fmp_stat_balance_q, 
                         fmp_stat_cash_q, 
-                        fmp_stat_keys_q] >> sending_slack_notification
+                        fmp_stat_keys_q] >> trigger_ml_update_weekly >> sending_slack_notification
 

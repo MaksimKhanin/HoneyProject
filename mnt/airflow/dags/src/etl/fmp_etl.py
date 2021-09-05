@@ -87,13 +87,17 @@ fmp_con = fmp_con.FMP_Connector(FMP_TOKEN)
 
 def _retry(func, retry_limit, *args, **kwargs):
     for n_try in range(retry_limit):
-        output = func(*args, **kwargs)
-        if output:
-            return
-        logger.warning(f"Function {func} on {n_try} retry")
-        time.sleep(30)
-    raise Exception(f"Function {func} failed after {n_try} retries")
-
+        try:
+            output = func(*args, **kwargs)
+            if output:
+                return True
+            logger.warning(f"Function {func} on {n_try} retry")
+            time.sleep(30)
+        except Exception as e:
+            logger.error(f"Function {func} failed with error: {e}")
+            continue
+    logger.critical(f"Function {func} failed after {n_try} retries")
+    return False
 
 def round_prev_candle(timestamp, interval):
     return {
@@ -111,11 +115,12 @@ def update_company_profiles(fmp_connector, db_connector):
     logger.info(f"Update company fmp profile starts")
     ticker_array = db_connector.get_fetchAll(queryLib.GET_TINK_X_FMP_SYMBOLS_LIST)
     ticker_array = list(map(lambda x: x[0], ticker_array))
-    ticker_string = ",".join(ticker_array)
-    _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector,
-           stat="profile", ticker=ticker_string,
-           insert_sql=queryLib.INSERT_COMPANY_PROFILE_JSON)
-    logger.info(f"Update company fmp profile finished")
+    #ticker_string = ",".join(ticker_array)
+    for each_ticker in ticker_array:
+        _retry(update_fmp_stat, NM_TRIES, fmp_connector, db_connector,
+               stat="profile", ticker=each_ticker,
+               insert_sql=queryLib.INSERT_COMPANY_PROFILE_JSON)
+        logger.info(f"Update company fmp profile finished")
 
 def upload_company_calendar(fmp_connector, db_connector, stat="historical/earning_calendar"):
     logger.info(f"Uploading companies' history calendars starts")
@@ -188,7 +193,7 @@ def update_company_fin_stat(fmp_connector, db_connector, stat, period):
 
 def parse_fmp_json(json_data, option="default"):
     if option == "historical-price-full":
-        return json_data["historical"],
+        return json_data["historical"]
     else:
         return json_data
 
@@ -208,7 +213,8 @@ def update_fmp_stat(fmp_connector, db_connector, **kwargs):
         logger.info(f"Requesting {stat}")
     request = fmp_connector.get_finansials(**kwargs)
     if request.status_code != 200:
-        logger.warning(f"FMP Returned bad code {request.status_code}, {request.head}")
+        logger.warning(f"FMP Returned bad code {request.status_code}")
+        logger.warning(f"FMP Returned {request.head}")
         return False
     else:
         stat = parse_fmp_json(request.json(), option=parse_option)

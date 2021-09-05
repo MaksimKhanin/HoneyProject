@@ -15,8 +15,8 @@ from datetime import datetime, timezone, timedelta
 
 last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
-PCA_NUMS = ["0","1","2"]
-PCA_TIME_BASES = ["100","365","730"]
+PCA_NUMS = ["0", "1", "2"]
+PCA_TIME_BASES = ["100", "365", "730"]
 
 tab3_df = main_app.get_data_from_db(querylib.GET_CLOSE_PRICES)
 tab3_df = tab3_df.astype({"close": "float64",

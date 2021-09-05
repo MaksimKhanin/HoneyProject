@@ -561,6 +561,8 @@ GET_FMP_SYMBOL_LIST = """
     FROM fmp.security;
 """
 
+
+
 UPDATE_FMP_LAST_CANDLE_UPDATE = """
     INSERT INTO sys_upd.fmp_candle VALUES
     (%s, %s, %s)

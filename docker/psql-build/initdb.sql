@@ -20,6 +20,21 @@ CREATE TABLE IF NOT EXISTS tink.security (
     PRIMARY KEY("figi", "ticker")
     );
 
+DROP TABLE IF EXISTS tink.portfolio;
+CREATE TABLE IF NOT EXISTS tink.portfolio (
+    "figi" TEXT,
+    "ticker" TEXT,
+    "isin" TEXT,
+    "instrumentType" TEXT,
+    "balance" NUMERIC,
+    "lots" NUMERIC,
+    "expectedYield" JSON,
+    "averagePositionPrice" JSON,
+    "name" TEXT,
+    "blocked" NUMERIC,
+    PRIMARY KEY("figi", "ticker")
+    );
+
 DROP TABLE IF EXISTS tink.candles_day;
 CREATE TABLE IF NOT EXISTS tink.candle_day (
     "o" NUMERIC,
@@ -448,4 +463,13 @@ CREATE TABLE IF NOT EXISTS ml.stmnt_scores (
     "sector" TEXT,
     "statement_score" NUMERIC,
     PRIMARY KEY("symbol", "date")
+);
+
+DROP TABLE IF EXISTS ml.trend_locator;
+CREATE TABLE IF NOT EXISTS ml.trend_locator (
+    "ticker" TEXT,
+    "date" TIMESTAMP,
+    "return_pred" NUMERIC,
+    "prob_pred" NUMERIC,
+    PRIMARY KEY("ticker", "date")
 );
