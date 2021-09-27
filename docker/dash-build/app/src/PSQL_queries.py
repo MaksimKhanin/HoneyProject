@@ -122,32 +122,49 @@ GET_STTMNTS_SECTOR_SCORES = """
 """
 
 GET_ML_SCORES_FOR_TODAY = """
-    SELECT * FROM anl.last_ml_scores
-"""
+DROP TABLE IF EXISTS last_stmnt_score;
+CREATE TEMPORARY TABLE IF NOT EXISTS last_stmnt_score AS (
+	SELECT
+	  main.symbol,
+	  main.statement_score
+	 FROM ml.stmnt_scores AS main
+		INNER JOIN (
+		 SELECT
+			 symbol,
+			 MAX(date) AS date
+		 FROM ml.stmnt_scores
+		 GROUP BY symbol
+		 ) AS src ON src.symbol = main.symbol 
+			AND src.date = main.date
+);
 
-GET_PORTFOLIO_SCORES = """
-    SELECT
-        p."ticker",
-        p."instrumentType" AS intrument_type,
-        p."balance",
-        (p."expectedYield" ->> 'currency') AS currency,
-        (p."expectedYield" ->> 'value') ::numeric AS expected_yield,
-        (p."averagePositionPrice" ->> 'value') ::numeric AS average_position_price,
-        s.sector,
-        s.industry,
-        s.z_50_close,
-        s.cluster,
-        s.return_pred,
-        s.prob_pred,
-        s.target_price,
-        s.statement_score
-    FROM tink.portfolio as p
-	    INNER JOIN anl.last_ml_scores as s ON p.ticker = s.ticker;
-"""
-
-GET_STRATEGY_SIGNALS = """
-    SELECT
-        *
-    FROM anl.create_anl_strategy_signals AS src
-	ORDER BY date DESC;
+	SELECT
+		dr.date, 
+		dr.ticker,
+		dr.name,					
+		dr.sector,
+		dr.industry,
+		dr.z_50_close,
+		
+		cl.cluster,
+		
+		trend.return_pred - 1 AS return_pred,
+		trend.prob_pred,
+		ROUND(dr.close * trend.return_pred, 5) AS target_price,
+		stmnt.statement_score
+		
+	FROM anl.daily_return AS dr
+		INNER JOIN (
+		SELECT
+			ticker,
+			MAX(date) as date
+		FROM anl.daily_return
+		GROUP BY ticker 
+		) AS maxdt 
+			ON dr.date=maxdt.date AND dr.ticker=maxdt.ticker
+		LEFT JOIN anl.ml_ticker_clustering AS cl
+			ON dr.ticker = cl.ticker
+		LEFT JOIN ml.trend_locator AS trend
+			ON dr.ticker = trend.ticker AND dr.date = trend.date
+		LEFT JOIN last_stmnt_score AS stmnt ON dr.ticker = stmnt.symbol;
 """

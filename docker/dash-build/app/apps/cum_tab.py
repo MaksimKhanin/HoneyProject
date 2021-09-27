@@ -16,23 +16,6 @@ from datetime import datetime, timezone, timedelta
 
 last_update_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
-strategy_signals_df = main_app.get_data_from_db(querylib.GET_STRATEGY_SIGNALS)
-strategy_signals_df = strategy_signals_df.astype({"date": "datetime64",
-                                                  "z_50_close": "float64",
-                                                  "return_pred": "float64",
-                                                  "prob_pred": "float64",
-                                                  "statement_score": "float64"})
-
-portfolio_scores_df = main_app.get_data_from_db(querylib.GET_PORTFOLIO_SCORES)
-portfolio_scores_df = portfolio_scores_df.astype({"balance": "float64",
-                                                  "expected_yield": "float64",
-                                                  "average_position_price": "float64",
-                                                  "z_50_close": "float64",
-                                                  "return_pred": "float64",
-                                                  "prob_pred": "float64",
-                                                  "target_price": "float64",
-                                                  "statement_score": "float64"})
-
 tab1_df = main_app.get_data_from_db(querylib.GET_RAW_DAILY_RETURN)
 tab1_df = tab1_df.astype({"daily_return": "float64",
                           "timestamp": "int64",
@@ -42,100 +25,13 @@ currencies = tab1_df["currency"].unique()
 date_range = tab1_df["timestamp"].values
 
 tab1_pca_df = main_app.get_data_from_db(querylib.GET_PCA)
-tab1_pca_df = tab1_pca_df.astype({"pca_loading_0": "float64", "pca_loading_1": "float64"})
+tab1_pca_df = tab1_pca_df.astype({"pca_loading_0": "float64","pca_loading_1": "float64"})
 
 layout = html.Div([
 
     dcc.Interval(id='tab1-interval-update', interval=3600*1000, n_intervals=0),
     dbc.Row([
         dbc.Col(html.Div(id="tab1-last-update-info"), width={'size': 5,  "offset": 1, 'order': 1})]),
-
-    html.Br(),
-
-    dbc.Row(dbc.Col(
-        dbc.Spinner(
-            dash_table.DataTable(
-                style_cell={
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
-                },
-                id='strategy-signals-tab',
-                columns=[
-                    {"name": i, "id": i} for i in ["Date", "Ticker", "Signal", "z_score", "Expected Return",
-                                                   "Trend Score", "Statement Score", "Cluster"]
-                ],
-                editable=False,              # allow editing of data inside all cells
-                cell_selectable=False,
-                sort_by = [{"column_id": "Trend Score", "direction": "desc"}],
-                filter_action="native",     # allow filtering of data by user ('native') or not ('none')
-                sort_action="native",       # enables data to be sorted per-column by user or not ('none')
-                sort_mode="single",         # sort across 'multi' or 'single' columns
-                selected_columns=[],        # ids of columns that user selects
-                selected_rows=[],           # indices of rows that user selects
-                page_action="native",       # all data is passed to the table up-front or not ('none')
-                page_current=0,             # page number that user is on
-                page_size=10,                # number of rows visible per page
-                # style_cell={                # ensure adequate header width when text is shorter than cell's text
-                #     'minWidth': 95, 'maxWidth': 95, 'width': 95
-                # },
-                style_cell_conditional=[    # align text columns to left. By default they are aligned to right
-                    {
-                        'if': {'column_id': c},
-                        'textAlign': 'left'
-                    } for c in ["Ticker", "Statement Score"]
-                ],
-                # style_data={                # overflow cells' content into multiple lines
-                #     'whiteSpace': 'normal',
-                #     'height': 'auto'
-                # }
-            ), size="lg", color="primary", type="border", fullscreen=False),
-        width={'size': 10,  "offset": 0, 'order': 1}),
-        justify='center', align='center'),
-    html.Br(),
-
-    dbc.Row(dbc.Col(
-        dbc.Spinner(
-            dash_table.DataTable(
-                style_cell={
-                    'whiteSpace': 'normal',
-                    'height': 'auto',
-                },
-                id='portfolio-tab-ml-scores',
-                columns=[
-                    {"name": i, "id": i} for i in ["Ticker", "Instrument Type", "Balance", "Currency", "Sector",
-                                                   "Expected Yield", "Average Position Price",
-                                                   "Cluster", "z_score", "Target Price",
-                                                   "Expected Return", "Trend Score", "Statement Score"]
-                ],
-                editable=False,              # allow editing of data inside all cells
-                cell_selectable=False,
-                sort_by = [{"column_id": "Trend Score", "direction": "desc"}],
-                filter_action="native",     # allow filtering of data by user ('native') or not ('none')
-                sort_action="native",       # enables data to be sorted per-column by user or not ('none')
-                sort_mode="single",         # sort across 'multi' or 'single' columns
-                selected_columns=[],        # ids of columns that user selects
-                selected_rows=[],           # indices of rows that user selects
-                page_action="native",       # all data is passed to the table up-front or not ('none')
-                page_current=0,             # page number that user is on
-                page_size=10,                # number of rows visible per page
-                # style_cell={                # ensure adequate header width when text is shorter than cell's text
-                #     'minWidth': 95, 'maxWidth': 95, 'width': 95
-                # },
-                style_cell_conditional=[    # align text columns to left. By default they are aligned to right
-                    {
-                        'if': {'column_id': c},
-                        'textAlign': 'left'
-                    } for c in ["Ticker", "Sector", "Statement Score"]
-                ],
-                # style_data={                # overflow cells' content into multiple lines
-                #     'whiteSpace': 'normal',
-                #     'height': 'auto'
-                # }
-            ), size="lg", color="primary", type="border", fullscreen=False),
-        width={'size': 10,  "offset": 0, 'order': 1}),
-        justify='center', align='center'),
-    html.Br(),
-
     dbc.Row(dbc.Col(
         html.Div(
             dcc.RangeSlider(id="tab1-slider", step=86400, included=True, allowCross=False),
@@ -233,8 +129,6 @@ def get_tab1_data(n_intervals):
     global last_update_dttm
     global currencies
     global date_range
-    global portfolio_scores_df
-    global strategy_signals_df
 
     current_dttm = datetime.utcnow().replace(tzinfo=timezone(timedelta(hours=0)))
 
@@ -246,81 +140,14 @@ def get_tab1_data(n_intervals):
                                   "timestamp": "int64",
                                   "date": "datetime64",
                                   "currency": "category"})
-
-        portfolio_scores_df = main_app.get_data_from_db(querylib.GET_PORTFOLIO_SCORES)
-        portfolio_scores_df = portfolio_scores_df.astype({"balance": "float64",
-                                                          "expected_yield": "float64",
-                                                          "average_position_price": "float64",
-                                                          "z_50_close": "float64",
-                                                          "return_pred": "float64",
-                                                          "prob_pred": "float64",
-                                                          "target_price": "float64",
-                                                          "statement_score": "float64"})
-
-        strategy_signals_df = main_app.get_data_from_db(querylib.GET_STRATEGY_SIGNALS)
-        strategy_signals_df = strategy_signals_df.astype({"date": "datetime64",
-                                                          "z_50_close": "float64",
-                                                          "return_pred": "float64",
-                                                          "prob_pred": "float64",
-                                                          "statement_score": "float64"})
-
+                                  #"ticker": "category",
+                                  #"sector": "category",
+                                  #"industry": "category",
+                                  #"name": "category"})
         currencies = tab1_df["currency"].unique()
         date_range = tab1_df["timestamp"].values
 
     return f"Last update utc dttm {last_update_dttm}"
-
-@app.callback(Output('strategy-signals-tab', 'data'),
-              [Input('tab1-interval-update', 'n_intervals')])
-def update_strategy_signals_table(n_intervals):
-    chart_df = strategy_signals_df
-    chart_df["statement_score"] = chart_df["statement_score"].round(2)
-
-    chart_df = chart_df.rename(columns = {
-        "date": "Date",
-        "ticker": "Ticker",
-        "signal": "Signal",
-        "z_50_close": "z_score",
-        "cluster": "Cluster",
-        "return_pred": "Expected Return",
-        "statement_score": "Statement Score",
-        "prob_pred": "Trend Score"
-
-    })
-    chart_df["z_score"] = chart_df["z_score"].round(2)
-    chart_df["Expected Return"] = chart_df["Expected Return"].round(2)
-    chart_df["Trend Score"] = chart_df["Trend Score"].round(2)
-    chart_df["Statement Score"] = chart_df["Statement Score"].round(2)
-
-    return chart_df.to_dict('records')
-
-@app.callback(Output('portfolio-tab-ml-scores', 'data'),
-              [Input('tab1-interval-update', 'n_intervals')])
-def update_porfolio_tab_table(n_intervals):
-    chart_df = portfolio_scores_df
-    chart_df["statement_score"] = chart_df["statement_score"].round(2)
-
-    chart_df = chart_df.rename(columns = {
-        "ticker": "Ticker",
-        "sector": "Sector",
-        "balance": "Balance",
-        "currency": "Currency",
-        "expected_yield": "Expected Yield",
-        "average_position_price":"Average Position Price",
-        "intrument_type": "Instrument Type",
-        "z_50_close": "z_score",
-        "cluster": "Cluster",
-        "return_pred": "Expected Return",
-        "target_price": "Target Price",
-        "statement_score": "Statement Score",
-        "prob_pred": "Trend Score"
-
-    })
-    chart_df["z_score"] = chart_df["z_score"].round(2)
-    chart_df["Expected Return"] = chart_df["Expected Return"].round(2)
-    chart_df["Trend Score"] = chart_df["Trend Score"].round(2)
-    chart_df["Statement Score"] = chart_df["Statement Score"].round(2)
-
-    return chart_df.to_dict('records')
 
 @app.callback(Output('tab1-currency-selector', 'options'),
               [Input('tab1-interval-update', 'n_intervals')])
@@ -340,7 +167,16 @@ def create_slider(n_intervals):
            (date_range.min(), date_range.max()), \
            marks
 
-
+# @app.callback([Output('tab1-pca2-distance', 'min'),
+#                Output('tab1-pca2-distance', 'max'),
+#                Output('tab1-pca2-distance', 'step')],
+#               [Input('tab1-interval-update', 'n_intervals')])
+# def create_slider(n_intervals):
+#     slider = tab1_pca_df["pca_loading_1"].abs()
+#     step = (slider - slider.shift(1)).mean()
+#     return slider.min(), \
+#            slider.max(), \
+#            step
 
 @app.callback(Output('daily-return-table', 'data'),
               [Input('tab1-slider', 'value'),

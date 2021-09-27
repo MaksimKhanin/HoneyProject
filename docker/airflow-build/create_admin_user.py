@@ -5,7 +5,7 @@ user = PasswordUser(models.User())
 user.username = 'admin'
 user.email = 'admin@airflow.com'
 user.superuser = True
-user.password = 'Zx129132Aa'
+user.password = 'Zx129132'
 session = settings.Session()
 session.add(user)
 session.commit()

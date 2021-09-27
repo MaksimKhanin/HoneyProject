@@ -1,2 +1,0 @@
-2021-04-25 20:08:12,499 - fmp_etl_logger - CRITICAL - Function <function update_fmp_stat at 0x000002050BDDC3A0> failed after 2 retries
-2021-04-25 20:09:34,627 - fmp_etl_logger - CRITICAL - Function <function update_fmp_stat at 0x000001D0EE8CC3A0> failed after 2 retries

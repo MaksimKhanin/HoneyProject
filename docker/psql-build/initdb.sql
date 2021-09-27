@@ -4,7 +4,6 @@ CREATE SCHEMA IF NOT EXISTS stg;
 CREATE SCHEMA IF NOT EXISTS sys_upd;
 CREATE SCHEMA IF NOT EXISTS fmp;
 CREATE SCHEMA IF NOT EXISTS anl;
-CREATE SCHEMA IF NOT EXISTS ml;
 CREATE DATABASE airflow;
 
 DROP TABLE IF EXISTS tink.security;
@@ -17,21 +16,6 @@ CREATE TABLE IF NOT EXISTS tink.security (
     "currency" TEXT, 
     "name" TEXT, 
     "type" TEXT,
-    PRIMARY KEY("figi", "ticker")
-    );
-
-DROP TABLE IF EXISTS tink.portfolio;
-CREATE TABLE IF NOT EXISTS tink.portfolio (
-    "figi" TEXT,
-    "ticker" TEXT,
-    "isin" TEXT,
-    "instrumentType" TEXT,
-    "balance" NUMERIC,
-    "lots" NUMERIC,
-    "expectedYield" JSON,
-    "averagePositionPrice" JSON,
-    "name" TEXT,
-    "blocked" NUMERIC,
     PRIMARY KEY("figi", "ticker")
     );
 
@@ -143,7 +127,7 @@ CREATE TABLE IF NOT EXISTS stg.balance_sheet (
     "link" TEXT,
     "finalLink" TEXT,
     FOREIGN KEY("symbol") REFERENCES fmp.company_profile("symbol") ON DELETE CASCADE,
-    UNIQUE("symbol", "date", "period")
+    UNIQUE("symbol", "date")
 );
 
 DROP TABLE IF EXISTS stg.cash_flows;
@@ -186,7 +170,7 @@ CREATE TABLE IF NOT EXISTS stg.cash_flows (
     "link" TEXT,
     "finalLink" TEXT,
     FOREIGN KEY("symbol") REFERENCES fmp.company_profile("symbol") ON DELETE CASCADE,
-    UNIQUE("symbol", "date", "period")
+    UNIQUE("symbol", "date")
 );
 
 DROP TABLE IF EXISTS stg.key_metrics;
@@ -251,7 +235,7 @@ CREATE TABLE IF NOT EXISTS stg.key_metrics (
     "roe" NUMERIC,
     "capexPerShare" NUMERIC,
     FOREIGN KEY("symbol") REFERENCES fmp.company_profile("symbol")  ON DELETE CASCADE,
-    UNIQUE("symbol", "date", "period")
+    UNIQUE("symbol", "date")
 );
 
 DROP TABLE IF EXISTS stg.income_statement;
@@ -290,7 +274,7 @@ CREATE TABLE IF NOT EXISTS stg.income_statement (
         "link" TEXT,
         "finalLink" TEXT,
         FOREIGN KEY("symbol") REFERENCES fmp.company_profile("symbol") ON DELETE CASCADE,
-        UNIQUE("symbol", "date", "period")
+        UNIQUE("symbol", "date")
 );
 
 DROP TABLE IF EXISTS fmp.income_statement_q;
@@ -355,40 +339,6 @@ CREATE TABLE IF NOT EXISTS fmp.candles_day (
     PRIMARY KEY("ticker", "time")
 );
 
-DROP TABLE IF EXISTS fmp.earnings_calendar;
-CREATE TABLE IF NOT EXISTS fmp.earnings_calendar (
-    "date" TEXT,
-    "symbol" TEXT,
-    "eps" NUMERIC,
-    "epsEstimated" NUMERIC,
-    "time" TEXT,
-    "revenue" NUMERIC,
-    "revenueEstimated" NUMERIC,
-    PRIMARY KEY("symbol", "date", "time")
-);
-
---DROP TABLE IF EXISTS fmp.enterprise_values;
---CREATE TABLE IF NOT EXISTS fmp.enterprise_values (
---    "symbol" TEXT,
---    "date" TEXT,
---    "period" TEXT,
---    "stockPrice" NUMERIC,
---    "numberOfShares" NUMERIC,
---    "marketCapitalization" NUMERIC,
---    "minusCashAndCashEquivalents" NUMERIC,
---    "addTotalDebt" NUMERIC,
---    "enterpriseValue" NUMERIC,
---    PRIMARY KEY("symbol", "date")
---);
-
-DROP TABLE IF EXISTS fmp.market_capitalization;
-CREATE TABLE IF NOT EXISTS fmp.market_capitalization (
-    "symbol" TEXT,
-    "date" TEXT,
-    "marketCap" NUMERIC,
-    PRIMARY KEY("symbol", "date")
-);
-
 DROP TABLE IF EXISTS sys_upd.tink_candle;
 CREATE TABLE IF NOT EXISTS sys_upd.tink_candle (
     "figi" TEXT,
@@ -447,29 +397,3 @@ BEGIN
 END;
 $$
 LANGUAGE PLPGSQL;
-
-
-DROP TABLE IF EXISTS ml.model_list;
-CREATE TABLE IF NOT EXISTS ml.model_list (
-    "model_id" TEXT,
-    "pickle" BYTEA NOT NULL,
-    PRIMARY KEY("model_id")
-);
-
-DROP TABLE IF EXISTS ml.stmnt_scores;
-CREATE TABLE IF NOT EXISTS ml.stmnt_scores (
-    "symbol" TEXT,
-    "date" TIMESTAMP,
-    "sector" TEXT,
-    "statement_score" NUMERIC,
-    PRIMARY KEY("symbol", "date")
-);
-
-DROP TABLE IF EXISTS ml.trend_locator;
-CREATE TABLE IF NOT EXISTS ml.trend_locator (
-    "ticker" TEXT,
-    "date" TIMESTAMP,
-    "return_pred" NUMERIC,
-    "prob_pred" NUMERIC,
-    PRIMARY KEY("ticker", "date")
-);

@@ -413,17 +413,16 @@ def update_stmnts_score_table(n_intervals):
     # chart_df["date"] = pd.to_datetime(chart_df["date"]).dt.strftime('%Y-%m-%d')
     chart_df = chart_df.rename(columns = {
         "ticker": "Ticker",
-        "sector": "Sector",
-        "date": "Date",
-        "z_50_close": "z_score",
+        "sector" : "Sector",
+        "date" : "Date",
+        "z_50_close" : "z_score",
         "cluster": "Cluster",
         "return_pred": "Expected Return",
         "target_price": "Target Price",
-        "statement_score": "Statement Score",
+        "statement_score" : "Statement Score",
         "prob_pred": "Trend Score"
 
     })
-
     chart_df["z_score"] = chart_df["z_score"].round(2)
     chart_df["Expected Return"] = chart_df["Expected Return"].round(2)
     chart_df["Trend Score"] = chart_df["Trend Score"].round(2)

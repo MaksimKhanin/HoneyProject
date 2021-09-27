@@ -63,7 +63,6 @@ with DAG(dag_id="tink_daily_update", schedule_interval="0 3 * * *", default_args
         username="honeySlackApp",
         text="DAG tink_daily_update: DONE",
     )
-
     
 
 terminal_stock_getter >> terminal_candles_daily >> get_current_portfolio >> trigger_ml_update_daily >> sending_slack_notification
