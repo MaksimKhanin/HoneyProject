@@ -1,4 +1,26 @@
-cache-directory
-trash
-.idea
+# Никогда не коммитить секреты!
 .env
+.env.local
+.env.*.local
+
+# Логи
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml

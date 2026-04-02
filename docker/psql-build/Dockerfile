@@ -1,6 +1,8 @@
-FROM postgres:13.1
-ENV POSTGRES_USER khanin
-ENV POSTGRES_PASSWORD Zx129132Aa
+FROM postgres:13
 
 COPY initdb.sql /docker-entrypoint-initdb.d/
-COPY ./manual_sectors.csv ./manual_sectors.csv
+# Копируем конфиг памяти
+COPY postgres.conf /etc/postgresql/postgresql.conf
+
+# Команда запуска с нашим конфигом
+CMD ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
