@@ -192,7 +192,6 @@ settings:
   log_file: logs/app.log
   log_level: ${LOG_LEVEL:-INFO}
   timezone: "Europe/Moscow"
-test_field: hello
 tinkoff:
   token: ${TINKOFF_TOKEN}
 telegram:
