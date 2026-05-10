@@ -17,7 +17,8 @@ def setup_logger(name: str, log_file: str, level: str = "INFO", keep_days: int =
 
     # Создаем папку для логов
     log_dir = os.path.dirname(log_file)
-    os.makedirs(log_dir, exist_ok=True)
+    if log_dir and not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
 
     # Формат сообщения
     formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s')

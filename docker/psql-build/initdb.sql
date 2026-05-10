@@ -39,3 +39,25 @@ CREATE TABLE IF NOT EXISTS tink.instruments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_instruments_ticker ON tink.instruments(ticker);
+
+
+CREATE TABLE IF NOT EXISTS tink.signals (
+    id SERIAL PRIMARY KEY,
+    ticker TEXT NOT NULL,
+    timeframe TEXT NOT NULL,
+    strategy TEXT NOT NULL,
+    signal TEXT NOT NULL,
+    price NUMERIC NOT NULL,
+    candle_time TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB DEFAULT '{}',
+    UNIQUE(ticker, timeframe, strategy, candle_time)
+);
+CREATE INDEX IF NOT EXISTS idx_signals_ticker_tf
+    ON tink.signals(ticker, timeframe);
+CREATE INDEX IF NOT EXISTS idx_signals_time
+    ON tink.signals(candle_time DESC);
+
+
+ ALTER TABLE tink.instrument_config
+ADD COLUMN IF NOT EXISTS live_trading_enabled BOOLEAN DEFAULT FALSE;

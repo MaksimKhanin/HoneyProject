@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Integration Test Report</title>
+<style>
+    body { font-family: monospace; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #569cd6; }
+    .summary { background: #2d2d2d; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    .pass { color: #4ec9b0; }
+    .fail { color: #f14c4c; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px; background: #333; }
+    td { padding: 8px 10px; border-bottom: 1px solid #444; }
+    .error { color: #f14c4c; }
+    small { color: #888; }
+</style>
+</head><body>
+    <h1>📊 Integration Test Report</h1>
+    <div class="summary">
+        <b>Test:</b> integration_PIKK_1h<br>
+        <b>Started:</b> 2026-04-05 13:44:39<br>
+        <b>Duration:</b> 8.34 sec<br>
+        <b>Result:</b> <span style="color:green">✅ PASS</span><br>
+        <b>Success Rate:</b> 100.0% (8/8 steps)
+    </div>
+    <table>
+        <tr><th>Step</th><th>Duration</th><th>Status</th><th>Details</th></tr>
+        
+            <tr class="pass">
+                <td>validate_config</td>
+                <td>0.001с</td>
+                <td>✅</td>
+                <td><br><small>config_valid: <b>True</b></small><br><small>test_params: <b>{'ticker': 'PIKK', 'timeframe': '1h', 'strategy': 'momentum'}</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>init_database</td>
+                <td>2.702с</td>
+                <td>✅</td>
+                <td><br><small>db_connected: <b>True</b></small><br><small>existing_candles: <b>63</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>init_broker</td>
+                <td>3.520с</td>
+                <td>✅</td>
+                <td><br><small>broker_connected: <b>True</b></small><br><small>instrument_uid: <b>03d5e771-fc10-438e-8892-85a40733612d</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>fetch_instrument_info</td>
+                <td>0.004с</td>
+                <td>✅</td>
+                <td><br><small>uid: <b>03d5e771-fc10-438e-8892-85a40733612d</b></small><br><small>name: <b>ПИК СЗ (ПАО) ао</b></small><br><small>currency: <b>rub</b></small><br><small>exchange: <b>moex_mrng_evng_e_wknd_dlr</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>load_candles</td>
+                <td>1.349с</td>
+                <td>✅</td>
+                <td><br><small>candles_loaded: <b>14</b></small><br><small>candles_saved: <b>14</b></small><br><small>sample_price: <b>523.0</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>run_strategy</td>
+                <td>0.602с</td>
+                <td>✅</td>
+                <td><br><small>strategy_executed: <b>True</b></small><br><small>signal: <b>HOLD</b></small><br><small>signals_saved: <b>0</b></small><br><small>data_points_used: <b>None</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>verify_signal_in_db</td>
+                <td>0.161с</td>
+                <td>✅</td>
+                <td><br><small>signal_found: <b>True</b></small><br><small>signal_type: <b>HOLD</b></small><br><small>price: <b>523.0</b></small><br><small>candle_time: <b>2026-04-05T10:00:00</b></small> </td>
+            </tr>
+            <tr class="pass">
+                <td>performance_check</td>
+                <td>0.000с</td>
+                <td>✅</td>
+                <td><br><small>performance_ok: <b>True</b></small><br><small>timings: <b>{'validate_config': 0.001, 'init_database': 2.702, 'init_broker': 3.52, 'fetch_instrument_info': 0.004, 'load_candles': 1.349, 'run_strategy': 0.602, 'verify_signal_in_db': 0.161}</b></small><br><small>issues: <b>[]</b></small> </td>
+            </tr>
+    </table>
+</body></html>

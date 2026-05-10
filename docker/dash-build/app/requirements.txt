@@ -1,9 +1,0 @@
-psycopg2>=2.7,<3.0
-dash
-dash-daq
-dash-auth
-dash-bootstrap-components
-pandas
-numpy
-python-dotenv
-Flask-Caching

@@ -1,0 +1,121 @@
+{
+  "summary": {
+    "test_name": "integration_ROSN_1h",
+    "started_at": "2026-04-05T13:42:17.335757",
+    "finished_at": "2026-04-05T13:42:23.842515",
+    "total_duration_sec": 6.503,
+    "steps_total": 8,
+    "steps_passed": 8,
+    "steps_failed": 0,
+    "overall_success": true,
+    "success_rate": 100.0
+  },
+  "steps": [
+    {
+      "name": "validate_config",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "config_valid": true,
+        "test_params": {
+          "ticker": "ROSN",
+          "timeframe": "1h",
+          "strategy": "momentum"
+        }
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:17.336756"
+    },
+    {
+      "name": "init_database",
+      "success": true,
+      "duration_sec": 2.207,
+      "details": {
+        "db_connected": true,
+        "existing_candles": 63
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:19.544023"
+    },
+    {
+      "name": "init_broker",
+      "success": true,
+      "duration_sec": 3.277,
+      "details": {
+        "broker_connected": true,
+        "instrument_uid": "fd417230-19cf-4e7b-9623-f7c9ca18ec6b"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:22.820936"
+    },
+    {
+      "name": "fetch_instrument_info",
+      "success": true,
+      "duration_sec": 0.003,
+      "details": {
+        "uid": "fd417230-19cf-4e7b-9623-f7c9ca18ec6b",
+        "name": "Роснефть",
+        "currency": "rub",
+        "exchange": "moex_mrng_evng_e_wknd_dlr"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:22.823947"
+    },
+    {
+      "name": "load_candles",
+      "success": true,
+      "duration_sec": 0.788,
+      "details": {
+        "candles_loaded": 14,
+        "candles_saved": 14,
+        "sample_price": 470.85
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:23.612296"
+    },
+    {
+      "name": "run_strategy",
+      "success": true,
+      "duration_sec": 0.159,
+      "details": {
+        "strategy_executed": true,
+        "signal": "WAIT",
+        "signals_saved": 0,
+        "data_points_used": null
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:23.771546"
+    },
+    {
+      "name": "verify_signal_in_db",
+      "success": true,
+      "duration_sec": 0.068,
+      "details": {
+        "signal_found": false,
+        "note": "Стратегия не сгенерировала торговый сигнал"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:23.840519"
+    },
+    {
+      "name": "performance_check",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "performance_ok": true,
+        "timings": {
+          "validate_config": 0.0,
+          "init_database": 2.207,
+          "init_broker": 3.277,
+          "fetch_instrument_info": 0.003,
+          "load_candles": 0.788,
+          "run_strategy": 0.159,
+          "verify_signal_in_db": 0.068
+        },
+        "issues": []
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:23.840519"
+    }
+  ]
+}

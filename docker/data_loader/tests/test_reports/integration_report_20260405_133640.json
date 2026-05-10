@@ -1,0 +1,23 @@
+{
+  "summary": {
+    "test_name": "integration_PIKK_1h",
+    "started_at": "2026-04-05T13:36:40.044115",
+    "finished_at": "2026-04-05T13:36:40.049122",
+    "total_duration_sec": 0.002,
+    "steps_total": 1,
+    "steps_passed": 0,
+    "steps_failed": 1,
+    "overall_success": false,
+    "success_rate": 0.0
+  },
+  "steps": [
+    {
+      "name": "validate_config",
+      "success": false,
+      "duration_sec": 0.002,
+      "details": {},
+      "error": "TradingBotError: Конфигурация невалидна: ⚠️ Нет прав на запись в лог-файл: test_integration.log",
+      "timestamp": "2026-04-05T13:36:40.047113"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+    "tickers": "MDMG",
+    "timeframe": "1h",
+    "price_type": "Close",
+    "days_back": 89,
+    "rolling_window": 200,
+    "deviation_method": "mad",
+    "show_z_score": true,
+    "show_percentiles": true
+}

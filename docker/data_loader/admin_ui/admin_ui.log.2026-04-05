@@ -1,0 +1,65 @@
+2026-04-05 17:19:39,176 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-05 17:19:39,204 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-05 17:19:39,205 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-05 17:19:39,205 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-05 17:20:09,429 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-05 17:20:09,457 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-05 17:20:09,458 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-05 17:20:09,458 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-05 17:23:13,512 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-05 17:23:13,540 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-05 17:23:36,640 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-05 17:23:36,641 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-05 17:23:42,295 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-05 17:23:42,327 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-05 17:23:59,820 | ERROR | DBManager | ❌ Пиздец при создании пула: could not translate host name "trade_db" to address: Name or service not known
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\db_manager.py", line 84, in _init_pool
+    self.conn_pool = pool.SimpleConnectionPool(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "trade_db" to address: Name or service not known
+
+2026-04-05 17:24:02,126 | ERROR | DBManager | ❌ Пиздец при создании пула: could not translate host name "trade_db" to address: Name or service not known
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\db_manager.py", line 84, in _init_pool
+    self.conn_pool = pool.SimpleConnectionPool(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "trade_db" to address: Name or service not known
+
+2026-04-05 17:24:09,331 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-05 17:24:09,332 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-05 17:26:49,495 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-05 17:26:49,522 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-05 17:26:54,902 | ERROR | DBManager | ❌ Пиздец при создании пула: could not translate host name "trade_db" to address: Name or service not known
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\db_manager.py", line 84, in _init_pool
+    self.conn_pool = pool.SimpleConnectionPool(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "trade_db" to address: Name or service not known
+
+2026-04-05 17:30:32,356 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-05 17:30:32,356 | INFO | AdminUI | ✅ Admin UI остановлен

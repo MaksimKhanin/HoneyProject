@@ -32,7 +32,6 @@ services:
     restart: always
     command: >
       python main_loader.py
-      --config /app/config.yaml
     env_file:
       - .env
     environment:
@@ -42,15 +41,18 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - TINKOFF_TOKEN=${TINKOFF_TOKEN}
-      - PYTHONUNBUFFERED=1
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       # 🔥 Включаем админку
-      - ENABLE_ADMIN=1
+      - ENABLE_ADMIN=1          # ← Включаем Admin UI
+      - UI_LOG_LEVEL=DEBUG    # Меньше шума в логах
+      - PYTHONUNBUFFERED=1      # Чтобы логи шли сразу в stdout
       - UI_USER=${UI_USER}
       - UI_PASS=${UI_PASS}
       - CONFIG_PATH=/app/config.yaml
     volumes:
       - ./logs:/app/logs
-      - ./config.yaml:/app/config.yaml  # 🔥 Убрал :ro, теперь можно писать
+     # - ./config.yaml:/app/config.yaml  # 🔥 Убрал :ro, теперь можно писать
     ports:
       # 🔥 Пробрасываем порт админки (только localhost!)
       - "127.0.0.1:8000:8000"

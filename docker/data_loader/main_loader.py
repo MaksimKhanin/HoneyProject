@@ -1,478 +1,533 @@
+# main.py
+"""
+🎛️ Main Orchestrator: тонкий слой координации.
+Отвечает за: инициализацию компонентов, цикл загрузки, graceful shutdown.
+ВСЯ бизнес-логика вынесена в компоненты и БД.
+"""
+
 import os
-from zoneinfo import ZoneInfo
+import sys
 import asyncio
 import signal
+import argparse
 from datetime import datetime, timedelta
-from typing import List, Dict
-from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Any
+from zoneinfo import ZoneInfo
 
 from logger import setup_logger
-from config_manager import get_config_manager
-from T_con import T_connector
+from constants import (
+    Timeframe, StrategyName, SignalType,
+    DEFAULT_LOG_LEVEL, DEFAULT_TIMEZONE,
+    TIMEFRAMES
+)
 from db_manager import DBManager
+from T_con import TConnector
+from strategy.strategy_runner import StrategyRunner
 
-from strategy import run_strategy, get_price_type, _decimal_digits
+# Импорт стратегий (вынеси в отдельный модуль при росте)
+#from strategy import run_strategy, get_price_type
 
-TF_DEFAULTS = {
-    "1m": {"history_depth_days": 7, "update_interval_minutes": 5},
-    "5m": {"history_depth_days": 30, "update_interval_minutes": 15},
-    "15m": {"history_depth_days": 60, "update_interval_minutes": 30},
-    "1h": {"history_depth_days": 180, "update_interval_minutes": 60},
-    "1d": {"history_depth_days": 365, "update_interval_minutes": 1440},
-}
 
-class MainLoader:
-    """
-    Главный оркестратор с поддержкой:
-    - Нескольких таймфреймов на тикер
-    - Hot config reload (авто-детект + SIGHUP)
-    - Graceful shutdown
-    """
+class Orchestrator:
+    """Главный оркестратор приложения."""
 
-    def __init__(self, config_path: str = "config.yaml"):
-        self.config_path = config_path
-        self.logger = None
-        self.broker = None
-        self.db = None
-        self.config_manager = None
+    def __init__(
+            self,
+
+            # 📡 Tinkoff
+            tinkoff_token: str,
+
+            # 🗄️ БД
+            db_host: str,
+            db_name: str,
+            db_user: str,
+            db_password: str,
+            db_port: int = 5432,
+            db_schema: str = "public",
+
+            # 🪵 Логирование
+            log_level: str = DEFAULT_LOG_LEVEL,
+            log_file: str = "orchestrator.log",
+            timezone_name: str = DEFAULT_TIMEZONE,
+
+            # 📦 Telegram (опционально)
+            telegram_token: str = None,
+            telegram_chat_id: str = None,
+            notify_on_signals: set = None,
+    ):
+        # 🔐 Валидация обязательных параметров
+        if not tinkoff_token or tinkoff_token in ("YOUR_TOKEN_HERE", "xxx"):
+            raise ValueError("❌ Tinkoff token не указан!")
+
+        self.logger = setup_logger("Orchestrator", log_file, log_level)
+        self.tz = ZoneInfo(timezone_name)
         self.running = True
-        self._executor = ThreadPoolExecutor(max_workers=3)
+        self.notify_on = notify_on_signals or {SignalType.BUY, SignalType.SELL}
 
-        # Инициализация компонентов
-        self._init_components()
+        self.logger.info("🚀 Orchestrator инициализирован")
+        self.logger.info(f"🌍 Timezone: {timezone_name}, PID: {os.getpid()}")
 
-        # Настройка сигналов
-        self._setup_signals()
-
-    def _init_components(self):
-        """Инициализация всех компонентов."""
-        try:
-            # Config Manager (с hot reload)
-            self.config_manager = get_config_manager(self.config_path)
-            config = self.config_manager.get_config()
-
-            # Логгер
-            self.logger = setup_logger(
-                name="MainLoader",
-                log_file=config['settings']['log_file'],
-                level=config['settings']['log_level']
-            )
-            self.logger.info("=" * 60)
-            self.logger.info("ЗАГРУЗЧИК ДАННЫХ ЗАПУЩЕН")
-            self.logger.info("=" * 60)
-            self.logger.info(f"Конфиг: {self.config_path}")
-            self.logger.info(f"PID: {os.getpid()}")
-
-            self.tz = ZoneInfo(config.get('settings', {}).get('timezone', 'UTC'))
-            self.logger.info(f"🌍 Часовой пояс: {self.tz}")
-
-
-            # Брокер
-            self.logger.info("Инициализация брокера...")
-            self.broker = T_connector(self.config_path)
-
-            # База данных
-            self.logger.info("Инициализация базы данных...")
-            self.db = DBManager(self.config_path)
-
-            # Подписка на изменения конфига
-            self.config_manager.register_reload_callback(self._on_config_reload)
-            self.config_manager.register_reload_callback(lambda new, old: self.broker.reload_config())
-            self.config_manager.register_reload_callback(lambda new, old: self.db.reload_config())
-
-
-            # Запуск watcher конфига
-            self.config_manager.start_watcher()
-            self.config_manager.setup_signal_handler()
-
-            # 🔥 Telegram Notifier
-            telegram_cfg = config.get('telegram', {})
-            if telegram_cfg.get('enabled', False):
-                from telegram_notifier import TelegramNotifier
-                self.tg = TelegramNotifier(
-                    token=telegram_cfg.get('token', ''),
-                    chat_id=telegram_cfg.get('chat_id', ''),
-                    timeout=10
-                )
-                self.notify_on = set(telegram_cfg.get('notify_on', ['BUY', 'SELL']))
-                self.disable_notification = telegram_cfg.get('disable_notification', False)
-                self.logger.info("✅ TelegramNotifier подключен")
-
-            else:
-                self.tg = None
-                self.notify_on = set()
-                self.logger.info("ℹ️ Telegram уведомления отключены")
-
-            self.logger.info("✅ Все компоненты инициализированы")
-
-        except Exception as e:
-            self.logger.error(f"❌ Ошибка инициализации: {e}", exc_info=True)
-            raise
-
-        if os.getenv("ENABLE_ADMIN", "0") == "1":
-            import threading
-            from admin_ui.main import start_admin_ui  # импортируй функцию из admin_ui.py
-
-            thread = threading.Thread(target=start_admin_ui, daemon=True)
-            thread.start()
-            self.logger.info("✅ Admin UI запущен на порту 8000 (фон)")
-
-
-    def _setup_signals(self):
-        """Настройка обработчиков сигналов."""
-
-        def sigint_handler(signum, frame):
-            self.logger.info(f"\n📡 Получен SIGINT. Завершение работы...")
-            self.running = False
-
-        def sigterm_handler(signum, frame):
-            self.logger.info(f"\n📡 Получен SIGTERM. Завершение работы...")
-            self.running = False
-
-        signal.signal(signal.SIGINT, sigint_handler)
-        signal.signal(signal.SIGTERM, sigterm_handler)
-
-    def _on_config_reload(self, new_config: Dict, old_config: Dict):
-        """Callback при изменении конфига."""
-        self.logger.info("🔄 Конфиг изменен — применяем обновления...")
-
-        # Можно добавить логику для применения изменений на лету
-        # Например, обновить интервалы загрузки без перезапуска
-
-        old_instruments = len(old_config.get('instruments', []))
-        new_instruments = len(new_config.get('instruments', []))
-
-        if old_instruments != new_instruments:
-            self.logger.info(f"Изменено количество инструментов: {old_instruments} → {new_instruments}")
-
-    def _get_enabled_instruments(self) -> List[Dict]:
-        """Получение актуального списка инструментов из конфига."""
-        return self.config_manager.get_instruments(enabled_only=True)
-
-    async def _load_instrument(self, ticker: str, timeframe: str,
-                               history_depth: int,
-                               strategy_name: str = None,
-                               strategy_window: int = None) -> Dict:
-        """
-        Загрузка данных + запуск стратегии (если задана).
-        strategy_window: сколько свечей нужно стратегии для расчета (опционально)
-        """
-        stats = {
-            'ticker': ticker, 'timeframe': timeframe,
-            'candles_loaded': 0, 'candles_saved': 0,
-            'signal': None, 'strategy': strategy_name,
-            'success': False, 'error': None
-        }
-
-        try:
-            self.logger.info(f"📈 Загрузка: {ticker} ({timeframe})")
-
-            # 1. Получаем UID
-            uid = self.db.get_uid_by_ticker(ticker)
-            if not uid:
-                self.logger.warning(f"UID не найден в БД, запрашиваем у брокера...")
-                uid = await self.broker.get_instrument_uid(ticker)
-
-                if uid:
-                    inst_info = self.broker._instruments_cache.get(ticker, {})
-                    if inst_info:
-                        self.db.upsert_instruments_batch([inst_info])
-
-            if not uid:
-                raise Exception(f"Не удалось получить UID для {ticker}")
-
-            # 2. Последняя дата свечи
-            last_date = self.db.get_last_candle_date(ticker, timeframe)
-
-            # 3. Загрузка от брокера (инкремент)
-            candles = await self.broker.load_historical_data(
-                ticker=ticker,
-                uid=uid,
-                timeframe=timeframe,
-                last_known_date=last_date,
-                history_depth_days=history_depth
-            )
-            stats['candles_loaded'] = len(candles)
-
-            # 4. Сохранение в БД
-            if candles:
-                saved = self.db.save_candles(
-                    candles_list=candles, ticker=ticker, timeframe=timeframe
-                )
-                stats['candles_saved'] = saved
-
-            self.logger.debug(
-                f"🔍 Strategy check: ticker={ticker}, tf={timeframe}, "
-                f"strategy_name='{strategy_name}', strategy_window={strategy_window}"
-            )
-
-            # 🔥 5. ЗАПУСК СТРАТЕГИИ (если задана)
-            if strategy_name and strategy_name != "none":
-                # Определяем окно: если не задано явно — берем дефолты
-                window = strategy_window or self._get_default_window(strategy_name)
-                # Запрашиваем из БД достаточно данных для расчета
-                recent = self.db.get_recent_candles(ticker, timeframe, limit=window + 5)
-                if len(recent) >= window:
-
-
-                    if recent and len(recent) >= 2:
-                        # Если первая свеча новее последней — значит, порядок обратный (DESC)
-                        if recent[0]['time'] > recent[-1]['time']:
-                            self.logger.debug(f"🔄 Данные в порядке DESC (новые→старые), разворачиваем в ASC (старые→новые)")
-                            recent = list(reversed(recent))  # или recent[::-1]
-
-
-                    prices = get_price_type(recent, price_type='LHCO_Avg')
-
-                    # Запускаем стратегию
-                    signal, extra_info = run_strategy(strategy_name, prices)
-                    stats['signal'] = signal
-
-                    # Если есть торговый сигнал — сохраняем
-                    if signal in ["BUY", "SELL"]:
-                        last_candle = recent[-1]
-                        self.db.save_signal(
-                            ticker=ticker,
-                            timeframe=timeframe,
-                            strategy=strategy_name,
-                            signal=signal,
-                            price=last_candle['close'],
-                            candle_time=last_candle['time'],
-                            metadata={'closes_count': len(prices)}
-                        )
-
-                        self.logger.info(
-                            f"⚡ СИГНАЛ: {ticker}/{timeframe} [{strategy_name}] "
-                            f"→ {signal} @ {last_candle['close']}"
-                        )
-
-                        # Отправляем уведомление в телеграм если нужно
-                        if self.tg and signal in self.notify_on:
-                            extra_data = {
-                                'Свечей в расчёте': len(prices),
-                                'Стратегия': strategy_name,
-                                'Комментарий': extra_info
-                            }
-                            # Можно добавить больше метрик: RSI значение, SMA значения и т.д.
-
-                            asyncio.create_task(
-                                self.tg.send_signal(
-                                    ticker=ticker,
-                                    timeframe=timeframe,
-                                    strategy=strategy_name,
-                                    signal=signal,
-                                    price=last_candle['close'],
-                                    candle_time=last_candle['time'],
-                                    extra=extra_data
-                                )
-                            )
-
-                else:
-                    self.logger.debug(
-                        f"⏳ {ticker}/{timeframe}: недостаточно данных для {strategy_name} "
-                        f"(нужно {window}, есть {len(recent)})"
-                    )
-
-            stats['success'] = True
-            stats['total_in_db'] = self.db.get_candles_count(ticker, timeframe)
-
-        except Exception as e:
-            stats['error'] = str(e)
-            self.logger.error(f"❌ Ошибка {ticker} ({timeframe}): {e}", exc_info=True)
-
-        return stats
-
-    def _get_default_window(self, strategy_name: str) -> int:
-        """Дефолтные окна для стратегий (можно вынести в конфиг)."""
-        windows = {
-            "sma_cross": 50,  # нужно для SMA(21) + запас
-            "rsi_oversold": 30,  # RSI(14) + запас
-            "momentum": 10,  # lookback=3 + запас
-            "bollinger": 40,  # BB(20) + запас
-        }
-        return windows.get(strategy_name, 20)  # дефолт 20 свечей
-
-    async def _run_load_cycle(self) -> List[Dict]:
-        """Один цикл загрузки всех инструментов."""
-        instruments = self._get_enabled_instruments()
-        self.logger.info(f"\n📋 Загрузка {len(instruments)} (ticker, timeframe) пар...")
-
-        results = []
-        for inst in instruments:
-            if not self.running:
-                break
-
-            result = await self._load_instrument(
-                ticker=inst['ticker'],
-                timeframe=inst['timeframe'],
-                history_depth=inst['history_depth_days'],
-                strategy_name=inst.get('strategy', 'none'),
-                strategy_window=inst.get('strategy_window')
-            )
-            results.append(result)
-
-        return results
-
-    def _should_load_instrument(self, inst: Dict, last_load_times: Dict) -> bool:
-        """Проверка, пора ли загружать инструмент."""
-        key = f"{inst['ticker']}_{inst['timeframe']}"
-        last_load = last_load_times.get(key)
-
-        if last_load is None:
-            return True  # Ещё не загружали → грузим
-
-        # 🔥 БЕЗОПАСНОЕ ПОЛУЧЕНИЕ + ДЕФОЛТ ИЗ НАШИХ ТАБЛИЦ
-        interval = inst.get('update_interval_minutes')
-
-        self.logger.debug(
-            f"🔍 Проверка {inst['ticker']}/{inst['timeframe']}: "
-            f"last_load={last_load}, interval={interval}, now={datetime.now()}"
+        # 🔗 Инициализация компонентов
+        self.db = DBManager(
+            db_host=db_host, db_name=db_name, db_user=db_user,
+            db_password=db_password, db_port=db_port, db_schema=db_schema,
+            log_level=log_level, timezone_name=timezone_name
         )
 
-        if interval is None:
-            # Берем дефолт из TF_DEFAULTS (которые у нас уже есть!)
-            timeframe = inst.get('timeframe', '1d')
-            interval = TF_DEFAULTS.get(timeframe, {}).get('update_interval_minutes', 60)
-            self.logger.warning(
-                f"⚠️ update_interval_minutes не указан для {inst['ticker']}/{timeframe}, "
-                f"использую дефолт: {interval} мин"
-            )
+        self.broker = TConnector(
+            token=tinkoff_token,
+            log_level=log_level,
+            log_file=log_file.replace("orchestrator", "tinkoff")
+        )
 
-        next_load = last_load + timedelta(minutes=interval)
-        return datetime.now() >= next_load
+        # 📡 Telegram notifier (опционально)
+        self.tg = None
+        if telegram_token and telegram_chat_id:
+            try:
+                from telegram_notifier import TelegramNotifier
+                self.tg = TelegramNotifier(
+                    token=telegram_token,
+                    chat_id=telegram_chat_id,
+                    timeout=10
+                )
+                self.logger.info("✅ TelegramNotifier подключен")
+            except ImportError:
+                self.logger.warning("⚠️ TelegramNotifier не установлен, уведомления отключены")
 
-    async def run_continuous(self):
-        """
-        Непрерывный режим с индивидуальными интервалами для каждого (ticker, timeframe).
-        """
-        self.logger.info("🚀 Запуск в непрерывном режиме")
-        self.logger.info("💡 Для перезагрузки конфига: kill -HUP {} или измените config.yaml".format(os.getpid()))
+        # 🗄️ Инициализация таблиц
+        self.db.init_instrument_config_table()
+        self.db.init_metrics_table()
 
-        last_load_times = {}  # Ключ: "ticker_timeframe", Значение: datetime последнего запуска
+        # 🚀 Запуск Admin UI в фоне (если включено)
+        self._start_admin_ui_thread(host="0.0.0.0", port=8000)
+
+        # 📡 Сигналы завершения
+        self._setup_signals()
+
+    def _setup_signals(self):
+        """Настройка обработчиков SIGINT/SIGTERM."""
+
+        def handler(signum, frame):
+            self.logger.info(f"📡 Сигнал {signum}: запуск graceful shutdown...")
+            self.running = False
+            # Запускаем close() в отдельном потоке, чтобы не блокировать сигнал
+            import threading
+            t = threading.Thread(target=self.close, daemon=True)
+            t.start()
+
+        signal.signal(signal.SIGINT, handler)  # Ctrl+C
+        signal.signal(signal.SIGTERM, handler)  # docker stop / kill
+
+    async def _load_single_instrument(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Загрузка одного инструмента + запуск стратегии (новая архитектура)."""
+        ticker = config['ticker']
+        timeframe = config['timeframe']
+        strategy_name = config.get('strategy_name', 'none')
+
+        # 🔥 Читаем флаги и параметры
+        strategy_params = config.get('strategy_params', {}) or {}
+        direction = strategy_params.get('direction', 'ALL')  # Из JSON
+        live_enabled = config.get('live_trading_enabled', False)
+
+        result = {
+            "ticker": ticker, "timeframe": timeframe, "strategy": strategy_name,
+            "load_ok": False, "strategy_ok": False, "signal": None,
+            "execution_mode": "watchdog", "orders_executed": 0
+        }
+
+        try:
+            # 🕯️ 1. Загрузка цен (без изменений)
+            from price_loader import PriceLoader
+            loader = PriceLoader(ticker=ticker, timeframe=timeframe, broker=self.broker, db=self.db, logger=self.logger)
+            load_result = await loader.load_incremental(history_depth_days=config.get('history_depth_days'))
+            result["load_ok"] = load_result.get("success", False)
+            result["candles_saved"] = load_result.get("candles_saved", 0)
+
+            # 📊 1.5. Расчёт метрик (без изменений)
+            if result["load_ok"]:
+                from metrics.engine import MetricsEngine
+                engine = MetricsEngine(db=self.db, metric_names=None)
+                candles_for_metrics = self.db.get_recent_candles(ticker, timeframe,
+                                                                 limit=engine.recommended_fetch_limit)
+                candles_for_metrics = list(reversed(candles_for_metrics))
+                if len(candles_for_metrics) >= engine.min_candles_required:
+                    engine.calculate_for_candles(ticker, timeframe, candles_for_metrics)
+
+            # 🧠 2. Запуск стратегии (НОВАЯ ЛОГИКА)
+            if result["load_ok"] and StrategyName.is_active(strategy_name):
+                account_id = None
+                if live_enabled:
+                    try:
+                        account_id = await self.broker.get_account_id()
+                    except Exception as e:
+                        self.logger.warning(f"⚠️ Не удалось получить account_id: {e}. Фоллбэк в watchdog.")
+                        live_enabled = False
+
+                runner = StrategyRunner(
+                    ticker=ticker, timeframe=timeframe, strategy_name=strategy_name,
+                    db=self.db, broker=self.broker,  # 🔥 Брокер нужен для LiveExecutor
+                    live_trading_enabled=live_enabled,
+                    telegram_notifier=self.tg, logger=self.logger,
+                    account_id=account_id, strategy_class=None
+                )
+                # 🔥 Передаём strategy_params целиком (direction уже внутри)
+                runner.configure(window=config.get('strategy_window'), params=strategy_params)
+
+                strat_result = await runner.run(notify_signals=self.notify_on if self.tg else None)
+
+                result["strategy_ok"] = strat_result.get("success", False)
+                result["signal"] = strat_result.get("signal")
+                result["execution_mode"] = strat_result.get("execution_mode", "watchdog")
+                result["orders_executed"] = strat_result.get("orders_executed", 0)
+
+            return result
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка {ticker}/{timeframe}: {e}", exc_info=True)
+            result["error"] = str(e)
+            return result
+
+    async def run_cycle(self) -> List[Dict[str, Any]]:
+        """Один цикл обработки всех активных инструментов."""
+        # Получаем конфигурации из БД (не из YAML!)
+        configs = self.db.get_enabled_instrument_configs()
+        if not configs:
+            self.logger.warning("⚠️ Нет активных инструментов в instrument_config")
+            return []
+
+        self.logger.info(f"📋 Обработка {len(configs)} инструментов...")
+        results = []
+
+        # Последовательная обработка (для 2GB VPS)
+        # Для прода можно добавить asyncio.Semaphore(MAX_CONCURRENT_LOADS)
+        for cfg in configs:
+            if not self.running:
+                break
+            result = await self._load_single_instrument(cfg)
+            results.append(result)
+
+            # Лёгкая пауза, чтобы не перегружать API
+            await asyncio.sleep(0.1)
+
+        # Краткий отчёт
+        success_count = sum(1 for r in results if r.get("load_ok"))
+        self.logger.info(f"✅ Цикл завершён: {success_count}/{len(results)} успешно")
+        return results
+
+    async def run_continuous(self, check_interval_sec: int = 60):
+        """Непрерывный режим с двойным триггером: таймер + расписание + защита от дублей."""
+        self.logger.info("🔄 Запуск в непрерывном режиме (двойной триггер + anti-spam)")
+
+        last_load_times: Dict[str, datetime] = {}  # Для таймера
+        last_schedule_run: Dict[str, Any] = {}  # 🔥 НОВОЕ: для расписания
 
         while self.running:
             try:
-                # Получаем актуальный список инструментов (из возможно обновленного конфига)
-                instruments = self._get_enabled_instruments()
+                configs = self.db.get_enabled_instrument_configs()
+                now = datetime.now(self.tz)
 
-                # Фильтруем только те, что пора обновлять
                 to_load = []
-                for inst in instruments:
-                    if self._should_load_instrument(inst, last_load_times):
-                        to_load.append(inst)
+                for cfg in configs:
+                    key = f"{cfg['ticker']}_{cfg['timeframe']}"
+                    timeframe = cfg['timeframe']
+                    interval = cfg.get('update_interval_minutes', 60)
+
+                    # 🔹 Условие 1: таймер истёк
+                    last = last_load_times.get(key)
+                    timer_expired = last is None or now >= last + timedelta(minutes=interval)
+
+                    # 🔹 Условие 2: расписание совпадает
+                    schedule_match = self._should_run_by_schedule(timeframe, now)
+
+                    # 🔥 НОВОЕ: проверка, не срабатывало ли расписание уже в этом окне
+                    schedule_allowed = True
+                    if schedule_match:
+                        last_sched = last_schedule_run.get(key)
+                        tf_config = TIMEFRAMES.get(timeframe, {})
+
+                        # Определяем "ключ окна" расписания: что должно измениться, чтобы разрешить повтор
+                        if tf_config.get("schedule_weekday") is not None:
+                            # Для недельных: ключ = (год, неделя, час)
+                            window_key = (now.isocalendar()[0], now.isocalendar()[1], now.hour)
+                        elif tf_config.get("schedule_hour") is not None:
+                            # Для дневных: ключ = (год, месяц, день, час)
+                            window_key = (now.year, now.month, now.day, now.hour)
+                        elif tf_config.get("schedule_minute") is not None:
+                            # Для часовых/минутных: ключ = (год, месяц, день, час, минута)
+                            window_key = (now.year, now.month, now.day, now.hour, now.minute)
+                        else:
+                            window_key = None  # Нет расписания → всегда разрешено
+
+                        # Если окно не сменилось → расписание уже отработало, пропускаем
+                        if window_key and last_sched == window_key:
+                            schedule_allowed = False
+                            schedule_match = False  # Сбрасываем, чтобы не путать логику ниже
+                        else:
+                            # Запоминаем, что отработали это окно
+                            last_schedule_run[key] = window_key
+
+                    # ✅ Запускаем если: таймер ИЛИ (расписание и ещё не срабатывало в этом окне)
+                    if timer_expired or (schedule_match and schedule_allowed):
+                        to_load.append(cfg)
+
+                        # 🔥 Логирование причины
+                        if schedule_match and schedule_allowed and not timer_expired:
+                            self.logger.info(f"📅 Schedule trigger: {key} @ {now.strftime('%Y-%m-%d %H:%M')}")
+                        elif timer_expired:
+                            self.logger.debug(f"⏱️ Timer trigger: {key} (last: {last})")
 
                 if to_load:
-                    self.logger.info(f"\n⏰ Время обновлять {len(to_load)} инструментов:")
-                    for inst in to_load:
-                        self.logger.info(f"   - {inst['ticker']} ({inst['timeframe']})")
+                    self.logger.info(f"⏰ Запуск обновления {len(to_load)} инструментов")
 
-                    # Загружаем только те, что пора
-                    results = []
-                    for inst in to_load:
-                        if not self.running:
-                            break
+                    results = await asyncio.gather(
+                        *(self._load_single_instrument(cfg) for cfg in to_load),
+                        return_exceptions=True
+                    )
 
-                        # 🔥 Извлекаем параметры стратегии из конфига
-                        strategy = inst.get("strategy", "none")
+                    # 🔥 Сбрасываем таймер для всех обработанных
+                    for cfg in to_load:
+                        key = f"{cfg['ticker']}_{cfg['timeframe']}"
+                        last_load_times[key] = now
 
-                        # Опционально: если в конфиге есть strategy_window — используем его
-                        strategy_window = inst.get("strategy_window")  # можно добавить в конфиг
-
-                        result = await self._load_instrument(
-                            ticker=inst['ticker'],
-                            timeframe=inst['timeframe'],
-                            history_depth=inst['history_depth_days'],  # ← из конфига!
-                            strategy_name=inst.get('strategy', 'none'),
-                            strategy_window=inst.get('strategy_window')
-                        )
-                        results.append(result)
-
-                        # Обновляем время последней загрузки
-                        key = f"{inst['ticker']}_{inst['timeframe']}"
-                        last_load_times[key] = datetime.now()
-
-                    # Отчет
-                    self.logger.info("\n📊 Отчет:")
+                    # Отчёт
                     for r in results:
-                        status = "✅" if r['success'] else "❌"
-                        self.logger.info(f"   {status} {r['ticker']} ({r['timeframe']}): {r['candles_saved']} свечей")
+                        if isinstance(r, Exception):
+                            self.logger.error(f"❌ Ошибка в задаче: {r}")
+                        elif r:
+                            status = "✅" if r.get("load_ok") else "❌"
+                            self.logger.info(
+                                f"   {status} {r['ticker']}/{r['timeframe']}: "
+                                f"{r.get('candles_saved', 0)} свечей, сигнал: {r.get('signal', '-')}"
+                            )
                 else:
-                    self.logger.debug("⏳ Все инструменты актуальны, ждем...")
+                    # Тихий лог раз в 10 минут
+                    if int(now.timestamp()) % 600 < check_interval_sec:
+                        self.logger.debug(f"⏳ Нет инструментов для обновления @ {now.strftime('%H:%M')}")
 
-                # Пауза 1 минута перед следующей проверкой
-                await asyncio.sleep(60)
+                await asyncio.sleep(check_interval_sec)
 
             except Exception as e:
-                self.logger.error(f"Критическая ошибка в цикле: {e}", exc_info=True)
+                self.logger.error(f"💥 Ошибка в цикле: {e}", exc_info=True)
                 if self.running:
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(check_interval_sec)
 
-        self.logger.info("Непрерывный режим завершен")
+        self.logger.info("🛑 Непрерывный режим завершён")
+
+    def _should_run_by_schedule(self, timeframe: str, now: datetime) -> bool:
+        """
+        Проверяет, попадает ли текущее время в расписание обновления для таймфрейма.
+
+        :param timeframe: ключ из TIMEFRAMES ("1h", "1d" и т.д.)
+        :param now: текущее время в часовом поясе оркестратора (self.tz)
+        :return: True если пора запускать обновление по расписанию
+        """
+        tf_config = TIMEFRAMES.get(timeframe, {})
+
+        # 🔹 Проверка минуты (для 1h, 5m, 15m...)
+        schedule_minute = tf_config.get("schedule_minute")
+        if schedule_minute is not None and now.minute != schedule_minute:
+            return False
+
+        # 🔹 Проверка часа (для 1d, 1w...)
+        schedule_hour = tf_config.get("schedule_hour")
+        if schedule_hour is not None and now.hour != schedule_hour:
+            return False
+
+        # 🔹 Проверка дня недели (для 1w)
+        schedule_weekday = tf_config.get("schedule_weekday")
+        if schedule_weekday is not None and now.weekday() != schedule_weekday:
+            return False
+
+        # ✅ Все условия расписания выполнены (или не заданы)
+        return True
 
     def sync_instruments(self):
-        """Синхронизация справочника инструментов."""
-        self.logger.info("\n📋 Синхронизация справочника инструментов...")
-
+        """Синхронизация справочника инструментов из Tinkoff в БД."""
+        self.logger.info("🔄 Синхронизация инструментов...")
         try:
             asyncio.run(self.broker.refresh_instruments_cache())
-            instruments_list = list(self.broker._instruments_cache.values())
-            saved = self.db.upsert_instruments_batch(instruments_list)
+            instruments = list(self.broker._instruments_cache.values())
+            saved = self.db.upsert_instruments_batch(instruments)
             self.logger.info(f"✅ Синхронизировано {saved} инструментов")
         except Exception as e:
-            self.logger.error(f"Ошибка синхронизации: {e}", exc_info=True)
+            self.logger.error(f"❌ Ошибка синхронизации: {e}", exc_info=True)
+
+    def add_instrument_to_config(
+            self,
+            ticker: str,
+            timeframe: str,
+            enabled: bool = True,
+            strategy: str = "none",
+            **kwargs
+    ) -> bool:
+        """
+        Удобный метод для добавления инструмента в БД (через CLI или код).
+        Пример:
+            orchestrator.add_instrument_to_config(
+                "SBER", "1h",
+                strategy="sma_cross",
+                history_depth_days=90,
+                priority=10
+            )
+        """
+        return self.db.upsert_instrument_config(
+            ticker=ticker, timeframe=timeframe, enabled=enabled,
+            strategy_name=strategy, **kwargs
+        )
+
+    def _start_admin_ui_thread(self, host: str = "0.0.0.0", port: int = 8000):
+        """
+        Запускает Admin UI в фоновом потоке с правильным управлением жизненным циклом.
+        """
+        if not os.getenv("ENABLE_ADMIN", "0") == "1":
+            return
+
+        try:
+            from admin_ui.main import app  # Импортируем FastAPI app, НЕ start_admin_ui
+
+            import uvicorn
+            from threading import Thread
+
+            # Конфигурация uvicorn для программного запуска
+            config = uvicorn.Config(
+                app=app,
+                host=host,
+                port=port,
+                log_level=os.getenv("UI_LOG_LEVEL", "info").lower(),
+                access_log=False,  # Чтобы не спамить в логи оркестратора
+                loop="asyncio",  # Используем тот же asyncio
+                lifespan="on",  # Включаем lifespan-события
+            )
+            server = uvicorn.Server(config)
+
+            # Флаг для отслеживания состояния
+            self._ui_thread = Thread(
+                target=server.run,
+                daemon=True,  # Поток умрёт вместе с основным процессом
+                name="AdminUI-Thread"
+            )
+            self._ui_server = server  # Сохраняем ссылку для возможного shutdown
+
+            self._ui_thread.start()
+            self.logger.info(f"✅ Admin UI запущен в фоне: http://{host}:{port}")
+
+            # Даём серверу 2 секунды на старт перед продолжением
+            import time
+            time.sleep(2)
+
+            # Проверяем, не упал ли сервер сразу
+            if not server.started:
+                self.logger.warning("⚠️ Admin UI не смог запуститься (возможно, порт занят)")
+
+        except ImportError as e:
+            self.logger.warning(f"⚠️ Admin UI не доступен (зависимости?): {e}")
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка запуска Admin UI: {e}", exc_info=True)
 
     def close(self):
-        """Корректное завершение."""
-        self.logger.info("🛑 Завершение работы...")
+        """Корректное завершение всех компонентов."""
+        self.logger.info("🔌 Завершение работы...")
+        self.running = False  # Сигнал циклу остановки
 
-        if self.config_manager:
-            self.config_manager.stop_watcher()
+        # 1. Останавливаем Admin UI (если запущен)
+        if hasattr(self, '_ui_server') and self._ui_server:
+            try:
+                self.logger.info("⏹️ Остановка Admin UI...")
+                self._ui_server.should_exit = True  # Сигнал uvicorn на остановку
+                if hasattr(self, '_ui_thread') and self._ui_thread.is_alive():
+                    self._ui_thread.join(timeout=5)  # Ждём до 5 сек
+                self.logger.info("✅ Admin UI остановлен")
+            except Exception as e:
+                self.logger.warning(f"⚠️ Ошибка остановки UI: {e}")
 
+        # 2. Закрываем соединения с БД
         if self.db:
             self.db.close()
 
-        if self._executor:
-            self._executor.shutdown(wait=False)
-
-        # 🔥 Закрываем Telegram сессию
-        if hasattr(self, 'tg') and self.tg:
+        # 3. Закрываем Telegram (если есть)
+        if self.tg and hasattr(self.tg, 'close'):
             try:
-                # Создаём временный event loop если нет активного
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(self.tg.close())
-                except RuntimeError:
-                    # Нет активного loop — создаём новый
-                    asyncio.run(self.tg.close())
-            except Exception as e:
-                self.logger.warning(f"⚠️ Ошибка закрытия TelegramNotifier: {e}")
+                asyncio.run(self.tg.close())
+            except:
+                pass
 
-        self.logger.info("=" * 60)
-        self.logger.info("ЗАГРУЗЧИК ОСТАНОВЛЕН")
-        self.logger.info("=" * 60)
+        # 4. Закрываем брокер (если есть метод close)
+        if self.broker and hasattr(self.broker, 'close'):
+            try:
+                asyncio.run(self.broker.close())
+            except:
+                pass
 
+        self.logger.info("✅ Orchestrator остановлен")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        self.close()
+
+
+# ===== ENTRY POINT =====
 
 async def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Загрузчик данных Tinkoff Invest')
+    parser = argparse.ArgumentParser(description='Algo Trading Orchestrator')
     parser.add_argument('--once', action='store_true', help='Однократный запуск')
-    parser.add_argument('--config', type=str, default='config.yaml', help='Путь к конфигу')
     parser.add_argument('--sync', action='store_true', help='Только синхронизация инструментов')
+    parser.add_argument('--add', nargs=3, metavar=('TICKER', 'TF', 'STRATEGY'),
+                        help='Добавить инструмент: --add SBER 1h sma_cross')
 
+    # Параметры из env (в продакшене лучше использовать pydantic-settings)
     args = parser.parse_args()
 
-    loader = MainLoader(config_path=args.config)
+    try:
+        orchestrator = Orchestrator(
+            # 🗄️ БД — из env
+            db_host=os.getenv("DB_HOST", "postgres"),
+            db_name=os.getenv("DB_NAME", "trading"),
+            db_user=os.getenv("DB_USER", "trader"),
+            db_password=os.getenv("DB_PASSWORD"),
+            db_port=int(os.getenv("DB_PORT", "5432")),
+            db_schema=os.getenv("DB_SCHEMA", "public"),
+
+            # 📡 Tinkoff — из env
+            tinkoff_token=os.getenv("TINKOFF_TOKEN"),
+
+            # 🪵 Логирование
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            timezone_name=os.getenv("TIMEZONE", "Europe/Moscow"),
+
+            # 📦 Telegram — опционально
+            telegram_token=os.getenv("TELEGRAM_TOKEN"),
+            telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID"),
+        )
+    except ValueError as e:
+        print(f"❌ Ошибка инициализации: {e}", file=sys.stderr)
+        print("💡 Проверь переменные окружения: DB_*, TINKOFF_TOKEN", file=sys.stderr)
+        sys.exit(1)
 
     try:
-        if args.sync:
-            loader.sync_instruments()
+        if args.add:
+            # Режим добавления инструмента
+            ticker, tf, strategy = args.add
+            if not Timeframe.is_valid(tf):
+                print(f"❌ Неверный таймфрейм: {tf}. Доступные: {Timeframe.all()}")
+                sys.exit(1)
+            success = orchestrator.add_instrument_to_config(
+                ticker=ticker, timeframe=tf, strategy_name=strategy
+            )
+            print(f"{'✅' if success else '❌'} Инструмент {ticker}/{tf} добавлен")
+            sys.exit(0 if success else 1)
+
+        elif args.sync:
+            orchestrator.sync_instruments()
+
         elif args.once:
-            await loader._run_load_cycle()
+            await orchestrator.run_cycle()
+
         else:
-            await loader.run_continuous()
+            await orchestrator.run_continuous()
+
     finally:
-        loader.close()
+        orchestrator.close()
 
 
 if __name__ == "__main__":

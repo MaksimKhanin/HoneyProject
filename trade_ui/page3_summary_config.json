@@ -1,0 +1,6 @@
+{
+    "timeframe": "1d",
+    "window": 50,
+    "price_type": "(Low+High)/2",
+    "max_days_old": 5
+}
