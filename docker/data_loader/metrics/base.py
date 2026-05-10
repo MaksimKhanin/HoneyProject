@@ -82,22 +82,53 @@ class PandasMetric(BaseMetric):
     - Совместимость с backtesting.py (там тоже pandas)
     - Меньше багов при переходе между средой тестирования и production
     
+    Параметризация:
+    - period: период расчёта (например, 14 для RSI)
+    - window: окно для скользящих расчётов
+    
     Пример использования:
     ```
+    # Создание метрики с кастомными параметрами
+    rsi_metric = RSIMetric(period=14)
+    rsi_metric_long = RSIMetric(period=21)
+    
     class RSIMetric(PandasMetric):
-        name = "rsi_14"
-        description = "RSI с периодом 14"
+        name = "rsi"
+        description = "RSI — индикатор перекупленности/перепроданности"
+        default_period = 14
 
         def calculate_pandas(self, df: pd.DataFrame, **kwargs) -> Dict[str, Any]:
             closes = df['close']
             delta = closes.diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            gain = (delta.where(delta > 0, 0)).rolling(window=self.period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=self.period).mean()
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
-            return {"rsi_14": round(rsi.iloc[-1], 2)}
+            return {f"rsi_{self.period}": round(rsi.iloc[-1], 2)}
     ```
     """
+    
+    # Параметры по умолчанию (переопределяются в __init__)
+    default_period: int = 14
+    default_window: int = 20
+
+    def __init__(self, period: Optional[int] = None, window: Optional[int] = None):
+        """
+        Инициализация метрики с параметрами.
+        
+        :param period: период расчёта (если не указан, используется default_period)
+        :param window: окно для скользящих расчётов (если не указан, используется default_window)
+        """
+        self.period = period if period is not None else self.default_period
+        self.window = window if window is not None else self.default_window
+        
+        # Динамическое формирование имени метрики, если оно не содержит параметров
+        if hasattr(self, 'name') and not hasattr(self, '_name_fixed'):
+            # Если имя содержит плейсхолдер, заменяем его
+            if '{period}' in self.name:
+                self.name = self.name.format(period=self.period)
+            if '{window}' in self.name:
+                self.name = self.name.format(window=self.window)
 
     @abstractmethod
     def calculate_pandas(

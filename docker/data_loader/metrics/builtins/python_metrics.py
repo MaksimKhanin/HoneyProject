@@ -12,23 +12,23 @@ from ..registry import register_metric
 
 @register_metric
 class RSIMetric(PandasMetric):
-    """RSI (Relative Strength Index) с периодом 14."""
-    name = "rsi_14"
-    description = "RSI(14) — индикатор перекупленности/перепроданности"
+    """RSI (Relative Strength Index) с настраиваемым периодом."""
+    name = "rsi_{period}"
+    description = "RSI — индикатор перекупленности/перепроданности"
+    default_period = 14
     
     @property
     def min_candles(self) -> int:
-        return 15  # 14 для расчёта + 1 для сравнения
+        return self.period + 1  # period для расчёта + 1 для сравнения
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
         closes = df['close']
         
         # Векторизированный расчёт RSI через pandas
         delta = closes.diff()
-        period = 14
         
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(window=self.period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=self.period).mean()
         
         # Защита от деления на ноль
         rs = gain / loss.replace(0, float('inf'))
@@ -39,18 +39,19 @@ class RSIMetric(PandasMetric):
         if math.isnan(rsi_value) or math.isinf(rsi_value):
             return {}
         
-        return {"rsi_14": round(rsi_value, 2)}
+        return {f"rsi_{self.period}": round(rsi_value, 2)}
 
 
 @register_metric
 class ZScoreMetric(PandasMetric):
-    """Z-Score цены за период."""
-    name = "z_score_200"
-    description = "Z-score цены за 200 свечей"
+    """Z-Score цены за настраиваемый период."""
+    name = "z_score_{period}"
+    description = "Z-score цены"
+    default_period = 200
     
     @property
     def min_candles(self) -> int:
-        return 100
+        return max(100, self.period // 2)  # Минимум половина периода
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
         # Логарифмические доходности на закрытиях
@@ -75,18 +76,19 @@ class ZScoreMetric(PandasMetric):
         
         z_score = (log_rets.iloc[-1] - mean) / std
         
-        return {"z_score_200": round(z_score, 2)}
+        return {f"z_score_{self.period}": round(z_score, 2)}
 
 
 @register_metric
 class PriceChangeMetric(PandasMetric):
-    """Изменение цены за период в %."""
-    name = "price_change_pct_3"
-    description = "Изменение цены за последние 3 свечей в %"
+    """Изменение цены за настраиваемый период в %."""
+    name = "price_change_pct_{period}"
+    description = "Изменение цены в %"
+    default_period = 3
     
     @property
     def min_candles(self) -> int:
-        return 3
+        return self.period
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
         closes = df['close']
@@ -94,7 +96,7 @@ class PriceChangeMetric(PandasMetric):
         if len(closes) < self.min_candles:
             return {}
         
-        old_price = closes.iloc[-self.min_candles]
+        old_price = closes.iloc[-self.period]
         new_price = closes.iloc[-1]
         
         if old_price == 0 or math.isnan(old_price) or math.isnan(new_price):
@@ -102,18 +104,19 @@ class PriceChangeMetric(PandasMetric):
         
         change_pct = (new_price - old_price) / old_price * 100
         
-        return {"price_change_pct_5": round(change_pct, 2)}
+        return {f"price_change_pct_{self.period}": round(change_pct, 2)}
 
 
 @register_metric
 class SkewKurtosisMetric(PandasMetric):
     """Асимметрия и эксцесс лог-доходностей на закрытиях (Close-to-Close)."""
-    name = "skew_kurt_200"
-    description = "Skewness и Excess Kurtosis по окну 200 свечей (на закрытиях)"
+    name = "skew_kurt_{period}"
+    description = "Skewness и Excess Kurtosis"
+    default_period = 200
     
     @property
     def min_candles(self) -> int:
-        return 100
+        return max(100, self.period // 2)
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
         # Логарифмические доходности на закрытиях
@@ -152,23 +155,24 @@ class SkewKurtosisMetric(PandasMetric):
         kurt = (m4 / (m2 ** 2)) - 3.0
         
         return {
-            "skew_200": round(skew, 4),
-            "kurt_excess_200": round(kurt, 4)
+            f"skew_{self.period}": round(skew, 4),
+            f"kurt_excess_{self.period}": round(kurt, 4)
         }
 
 
 @register_metric
-class Pullback20Metric(PandasMetric):
+class PullbackMetric(PandasMetric):
     """Откат цены от локального максимума за окно."""
-    name = "pullback_20"
-    description = "Pullback % от max(close) за 20 свечей"
+    name = "pullback_{window}"
+    description = "Pullback % от max(close)"
+    default_window = 20
     
     @property
     def min_candles(self) -> int:
-        return 20
+        return self.window
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
-        closes = df['close'].iloc[-self.min_candles:]
+        closes = df['close'].iloc[-self.window:]
         
         if len(closes) < self.min_candles:
             return {}
@@ -180,22 +184,22 @@ class Pullback20Metric(PandasMetric):
             return {}
         
         pullback = (max_close - current_close) / max_close
-        return {"pullback_20": round(pullback, 4)}
+        return {f"pullback_{self.window}": round(pullback, 4)}
 
 
 @register_metric
-class EMA50Metric(PandasMetric):
-    """Экспоненциальная скользящая средняя (EMA) c периодом 50"""
-    name = "ema_50"
-    description = "EMA(50) цены закрытия"
-    period = 50
+class EMAMetric(PandasMetric):
+    """Экспоненциальная скользящая средняя (EMA) с настраиваемым периодом."""
+    name = "ema_{period}"
+    description = "EMA цены закрытия"
+    default_period = 50
     
     @property
     def min_candles(self) -> int:
         # Математически для adjust=False достаточно 1 свечи,
         # но первые ~span значений сильно смещены из-за отсутствия истории.
         # Для сходимости нужно Period*2, чтобы отдавать адекватное значение.
-        return 100
+        return self.period * 2
 
     def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
         closes = df['close'].iloc[-self.min_candles:]
@@ -209,7 +213,7 @@ class EMA50Metric(PandasMetric):
         if math.isnan(ema):
             return {}
         
-        return {"ema_50": round(ema, 4)}
+        return {f"ema_{self.period}": round(ema, 4)}
 
 
 @register_metric
