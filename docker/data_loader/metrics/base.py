@@ -1,13 +1,20 @@
 # core/metrics/base.py
 """
 Базовые классы для метрик.
-Два шаблона: SQL (расчёт в БД) и Python (расчёт в коде).
+Два шаблона: SQL (расчёт в БД) и Python/Pandas (расчёт в коде).
 """
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import logging
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+    pd = None
 
 logger = logging.getLogger(__name__)
 
@@ -64,31 +71,41 @@ class BaseMetric(ABC):
         self._min_candles = value
 
 
-# ===== ШАБЛОН 1: Метрика на чистом Python =====
+# ===== ШАБЛОН 1: Метрика на Pandas (рекомендуемый) =====
 
-class PythonMetric(BaseMetric):
+class PandasMetric(BaseMetric):
     """
-    Шаблон для метрик, рассчитываемых в памяти на Python.
-
+    Шаблон для метрик, рассчитываемых через pandas.
+    
+    Преимущества перед pure Python:
+    - Векторизированные операции (быстрее в 10-100 раз)
+    - Совместимость с backtesting.py (там тоже pandas)
+    - Меньше багов при переходе между средой тестирования и production
+    
     Пример использования:
     ```
-    class RSIMetric(PythonMetric):
+    class RSIMetric(PandasMetric):
         name = "rsi_14"
         description = "RSI с периодом 14"
 
-        def calculate(self, ticker, timeframe, candles, **kwargs):
-            closes = [c['close'] for c in candles]
-            return {"rsi": calc_rsi(closes, period=14)}
+        def calculate_pandas(self, df: pd.DataFrame, **kwargs) -> Dict[str, Any]:
+            closes = df['close']
+            delta = closes.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            return {"rsi_14": round(rsi.iloc[-1], 2)}
     ```
     """
 
     @abstractmethod
-    def calculate_python(
+    def calculate_pandas(
             self,
-            candles: List[Dict[str, Any]],
+            df: 'pd.DataFrame',
             **kwargs
     ) -> Dict[str, Any]:
-        """Реализуй расчёт здесь. Получаешь только свечи, без БД."""
+        """Реализуй расчёт здесь. Получаешь DataFrame со свечами."""
         pass
 
     def calculate(
@@ -104,8 +121,22 @@ class PythonMetric(BaseMetric):
             logger.debug(f"⚠️ {self.name}: недостаточно данных ({len(candles)} < {self.min_candles})")
             return {}
 
+        if not PANDAS_AVAILABLE:
+            logger.error(f"❌ {self.name}: требуется pandas, но он не установлен")
+            return {}
+
         try:
-            result = self.calculate_python(candles, ticker=ticker, timeframe=timeframe, **kwargs)
+            # Конвертируем свечи в DataFrame
+            df = pd.DataFrame(candles)
+            
+            # Проверяем наличие необходимых колонок
+            required_cols = {'open', 'high', 'low', 'close', 'volume'}
+            missing_cols = required_cols - set(df.columns)
+            if missing_cols:
+                logger.error(f"❌ {self.name}: отсутствуют колонки {missing_cols}")
+                return {}
+            
+            result = self.calculate_pandas(df, ticker=ticker, timeframe=timeframe, **kwargs)
             logger.debug(f"✅ {self.name} для {ticker}/{timeframe}: {result}")
             return result
         except Exception as e:
@@ -171,6 +202,46 @@ class SQLMetric(BaseMetric):
                 logger.debug(f"⚠️ {self.name}: нет данных в БД для {ticker}/{timeframe}")
                 return {}
 
+        except Exception as e:
+            logger.error(f"❌ Ошибка в {self.name} ({ticker}/{timeframe}): {e}", exc_info=True)
+            return {}
+
+
+# ===== ШАБЛОН 3: Legacy Pure Python (для обратной совместимости) =====
+
+class PythonMetric(BaseMetric):
+    """
+    Устаревший шаблон для метрик на чистом Python.
+    Используется только для обратной совместимости.
+    Новые метрики пишите на PandasMetric.
+    """
+
+    @abstractmethod
+    def calculate_python(
+            self,
+            candles: List[Dict[str, Any]],
+            **kwargs
+    ) -> Dict[str, Any]:
+        """Реализуй расчёт здесь. Получаешь только свечи, без БД."""
+        pass
+
+    def calculate(
+            self,
+            ticker: str,
+            timeframe: str,
+            candles: List[Dict[str, Any]],
+            db=None,
+            **kwargs
+    ) -> Dict[str, Any]:
+        # Валидация входных данных
+        if not self.validate_input(candles):
+            logger.debug(f"⚠️ {self.name}: недостаточно данных ({len(candles)} < {self.min_candles})")
+            return {}
+
+        try:
+            result = self.calculate_python(candles, ticker=ticker, timeframe=timeframe, **kwargs)
+            logger.debug(f"✅ {self.name} для {ticker}/{timeframe}: {result}")
+            return result
         except Exception as e:
             logger.error(f"❌ Ошибка в {self.name} ({ticker}/{timeframe}): {e}", exc_info=True)
             return {}
