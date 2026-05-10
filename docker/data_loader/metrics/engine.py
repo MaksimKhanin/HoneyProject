@@ -31,7 +31,7 @@ class MetricsEngine:
         """
         self.db = db
         self.metric_names = metric_names or list_metrics()
-        self.metrics = [get_metric(name)() for name in self.metric_names]
+        self.metrics = [get_metric(name) for name in self.metric_names]
 
         # 🔥 ВЫЧИСЛЯЕМ, сколько свечей нужно минимум
         # Это ключевая строка — без неё recommended_fetch_limit упадёт!
