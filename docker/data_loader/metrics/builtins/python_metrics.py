@@ -1,165 +1,156 @@
 # core/metrics/builtins/python_metrics.py
 """
-Встроенные метрики, рассчитываемые на Python.
+Встроенные метрики, рассчитываемые на pandas.
+Все метрики переписаны с pure Python на pandas для совместимости с backtesting.py
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 import math
-from ..base import PythonMetric
+from ..base import PandasMetric
 from ..registry import register_metric
 
 
 @register_metric
-class RSIMetric(PythonMetric):
+class RSIMetric(PandasMetric):
     """RSI (Relative Strength Index) с периодом 14."""
     name = "rsi_14"
     description = "RSI(14) — индикатор перекупленности/перепроданности"
-    min_candles = 15  # Нужно минимум 15 свечей для RSI(14)
-
+    
     @property
     def min_candles(self) -> int:
         return 15  # 14 для расчёта + 1 для сравнения
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        closes = [c['close'] for c in candles]
-
-        # Простой расчёт RSI
-        deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        closes = df['close']
+        
+        # Векторизированный расчёт RSI через pandas
+        delta = closes.diff()
         period = 14
-
-        if len(deltas) < period:
+        
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        
+        # Защита от деления на ноль
+        rs = gain / loss.replace(0, float('inf'))
+        rsi = 100 - (100 / (1 + rs))
+        
+        # Возвращаем последнее значение
+        rsi_value = rsi.iloc[-1]
+        if math.isnan(rsi_value) or math.isinf(rsi_value):
             return {}
-
-        recent = deltas[-period:]
-        gains = [d if d > 0 else 0 for d in recent]
-        losses = [-d if d < 0 else 0 for d in recent]
-
-        avg_gain = sum(gains) / period
-        avg_loss = sum(losses) / period
-
-        if avg_loss == 0:
-            rsi = 100
-        else:
-            rs = avg_gain / avg_loss
-            rsi = 100 - (100 / (1 + rs))
-
-        return {"rsi_14": round(rsi, 2)}
+        
+        return {"rsi_14": round(rsi_value, 2)}
 
 
 @register_metric
-class ZScoreMetric(PythonMetric):
+class ZScoreMetric(PandasMetric):
     """Z-Score цены за период."""
     name = "z_score_200"
     description = "Z-score цены за 200 свечей"
-    min_candles = 100
-
+    
     @property
     def min_candles(self) -> int:
         return 100
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        closes = [c['close'] for c in candles[-self.min_candles:]]
-
-        if len(closes) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        # Логарифмические доходности на закрытиях
+        closes = df['close'].iloc[-self.min_candles:]
+        
+        # Защита от невалидных данных
+        valid_closes = closes[(closes > 0) & (closes.notna())]
+        if len(valid_closes) < 2:
             return {}
-
-        # 1. Логарифмические доходности на закрытиях
-        log_rets = []
-        for i in range(1, len(candles)):
-            prev_close = candles[i - 1]['close']
-            curr_close = candles[i]['close']
-
-            # Защита от деления на ноль и невалидных данных
-            if prev_close is None or curr_close is None or prev_close <= 0 or curr_close <= 0:
-                continue
-
-            log_rets.append(math.log(curr_close / prev_close))
-
-        closes = log_rets
-
-        mean = sum(closes) / len(closes)
-        variance = sum((x - mean) ** 2 for x in closes) / len(closes)
-        std = math.sqrt(variance)
-
-        z_score = (closes[-1] - mean) / std
-
+        
+        log_rets = valid_closes.pct_change().dropna()
+        log_rets = log_rets.apply(lambda x: math.log(1 + x) if abs(x) < 1 else None).dropna()
+        
+        if len(log_rets) < 2:
+            return {}
+        
+        mean = log_rets.mean()
+        std = log_rets.std(ddof=0)  # population std
+        
+        if std < 1e-12:
+            return {}
+        
+        z_score = (log_rets.iloc[-1] - mean) / std
+        
         return {"z_score_200": round(z_score, 2)}
 
 
 @register_metric
-class PriceChangeMetric(PythonMetric):
+class PriceChangeMetric(PandasMetric):
     """Изменение цены за период в %."""
     name = "price_change_pct_3"
     description = "Изменение цены за последние 3 свечей в %"
-    min_candles = 3
+    
+    @property
+    def min_candles(self) -> int:
+        return 3
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        if len(candles) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        closes = df['close']
+        
+        if len(closes) < self.min_candles:
             return {}
-
-        old_price = candles[-self.min_candles]['close']
-        new_price = candles[-1]['close']
-
-        if old_price == 0:
+        
+        old_price = closes.iloc[-self.min_candles]
+        new_price = closes.iloc[-1]
+        
+        if old_price == 0 or math.isnan(old_price) or math.isnan(new_price):
             return {}
-
+        
         change_pct = (new_price - old_price) / old_price * 100
-
+        
         return {"price_change_pct_5": round(change_pct, 2)}
 
 
-
-
 @register_metric
-class SkewKurtosisMetric(PythonMetric):
+class SkewKurtosisMetric(PandasMetric):
     """Асимметрия и эксцесс лог-доходностей на закрытиях (Close-to-Close)."""
     name = "skew_kurt_200"
     description = "Skewness и Excess Kurtosis по окну 200 свечей (на закрытиях)"
-    min_candles = 100
-
+    
     @property
     def min_candles(self) -> int:
         return 100
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        if len(candles) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        # Логарифмические доходности на закрытиях
+        closes = df['close']
+        
+        # Фильтрация невалидных данных
+        valid_mask = (closes > 0) & (closes.notna())
+        valid_closes = closes[valid_mask]
+        
+        if len(valid_closes) < 2:
             return {}
-
-        # 1. Логарифмические доходности на закрытиях
-        log_rets = []
-        for i in range(1, len(candles)):
-            prev_close = candles[i - 1]['close']
-            curr_close = candles[i]['close']
-
-            # Защита от деления на ноль и невалидных данных
-            if prev_close is None or curr_close is None or prev_close <= 0 or curr_close <= 0:
-                continue
-
-            log_rets.append(math.log(curr_close / prev_close))
-
-        #log_rets = [c['close'] for c in candles[-self.min_candles:]]
-
-        # 2. Берём последние 50 доходностей
-        window = self.min_candles-1
+        
+        # Лог-доходности
+        log_rets = valid_closes.pct_change().dropna()
+        log_rets = log_rets.apply(lambda x: math.log(1 + x) if abs(x) < 1 else None).dropna()
+        
+        window = self.min_candles - 1
         if len(log_rets) < window:
             return {}
-
-        recent = log_rets[-window:]
+        
+        recent = log_rets.iloc[-window:]
+        
+        # Центральные моменты через pandas
         n = len(recent)
-        mean = sum(recent) / n
-
-        # 3. Центральные моменты
-        m2 = sum((x - mean) ** 2 for x in recent) / n
-        if m2 < 1e-12:  # Защита от деления на околонулевую дисперсию
+        mean = recent.mean()
+        m2 = ((recent - mean) ** 2).mean()
+        
+        if m2 < 1e-12:
             return {}
-
-        m3 = sum((x - mean) ** 3 for x in recent) / n
-        m4 = sum((x - mean) ** 4 for x in recent) / n
-
-        # 4. Skew и Excess Kurtosis (Фишер)
+        
+        m3 = ((recent - mean) ** 3).mean()
+        m4 = ((recent - mean) ** 4).mean()
+        
+        # Skew и Excess Kurtosis (Фишер)
         skew = m3 / (m2 ** 1.5)
         kurt = (m4 / (m2 ** 2)) - 3.0
-
+        
         return {
             "skew_200": round(skew, 4),
             "kurt_excess_200": round(kurt, 4)
@@ -167,38 +158,38 @@ class SkewKurtosisMetric(PythonMetric):
 
 
 @register_metric
-class Pullback20Metric(PythonMetric):
+class Pullback20Metric(PandasMetric):
     """Откат цены от локального максимума за окно."""
     name = "pullback_20"
     description = "Pullback % от max(close) за 20 свечей"
-    min_candles = 20
-
+    
     @property
     def min_candles(self) -> int:
         return 20
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        if len(candles) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        closes = df['close'].iloc[-self.min_candles:]
+        
+        if len(closes) < self.min_candles:
             return {}
-
-        closes = [c['close'] for c in candles[-self.min_candles:]]
-        max_close = max(closes)
-        current_close = closes[-1]
-
-        if max_close <= 0:
+        
+        max_close = closes.max()
+        current_close = closes.iloc[-1]
+        
+        if max_close <= 0 or math.isnan(max_close) or math.isnan(current_close):
             return {}
-
+        
         pullback = (max_close - current_close) / max_close
         return {"pullback_20": round(pullback, 4)}
 
 
 @register_metric
-class EMA50Metric(PythonMetric):
+class EMA50Metric(PandasMetric):
     """Экспоненциальная скользящая средняя (EMA) c периодом 50"""
     name = "ema_50"
     description = "EMA(50) цены закрытия"
-    period=50
-
+    period = 50
+    
     @property
     def min_candles(self) -> int:
         # Математически для adjust=False достаточно 1 свечи,
@@ -206,34 +197,38 @@ class EMA50Metric(PythonMetric):
         # Для сходимости нужно Period*2, чтобы отдавать адекватное значение.
         return 100
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        if len(candles) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        closes = df['close'].iloc[-self.min_candles:]
+        
+        if len(closes) < self.min_candles:
             return {}
-
-        closes = [c['close'] for c in candles[-self.min_candles:]]
-        alpha = 2.0 / (self.period + 1)  # α = 2 / (50 + 1) ≈ 0.039215686
-
-        # Инициализация: EMA[0] = price[0] (строго соответствует adjust=False)
-        ema = closes[0]
-
-        # Рекуррентное обновление по всем ценам4
-        for price in closes[1:]:
-            ema = price * alpha + ema * (1 - alpha)
-
+        
+        # Используем встроенную EMA pandas (соответствует adjust=False)
+        ema = closes.ewm(span=self.period, adjust=False).mean().iloc[-1]
+        
+        if math.isnan(ema):
+            return {}
+        
         return {"ema_50": round(ema, 4)}
 
+
 @register_metric
-class ClosePrice(PythonMetric):
-    """Экспоненциальная скользящая средняя (EMA) c периодом 50"""
+class ClosePrice(PandasMetric):
+    """Цена закрытия последней свечи."""
     name = "close_price"
     description = "Just a close price"
-
+    
     @property
     def min_candles(self) -> int:
         return 1
 
-    def calculate_python(self, candles: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
-        if len(candles) < self.min_candles:
+    def calculate_pandas(self, df, **kwargs) -> Dict[str, Any]:
+        if len(df) < self.min_candles:
             return {}
-
-        return {"close_price": candles[-1]['close']}
+        
+        close_price = df['close'].iloc[-1]
+        
+        if math.isnan(close_price):
+            return {}
+        
+        return {"close_price": close_price}
