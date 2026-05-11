@@ -98,6 +98,8 @@ class Orchestrator:
         self.db.init_instrument_config_table()
         self.db.init_metrics_table()
 
+        self.sync_instruments()
+
         # 🚀 Запуск Admin UI в фоне (если включено)
         self._start_admin_ui_thread(host="0.0.0.0", port=8000)
 
