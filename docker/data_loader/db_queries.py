@@ -33,6 +33,13 @@ GET_UID_BY_TICKER = """
     SELECT uid FROM instruments WHERE ticker = %s
 """
 
+GET_ALL_INSTRUMENTS = """
+    SELECT uid, ticker, name, type, class_code, currency, 
+           exchange, min_price_increment, lot, api_trade_available, updated_at
+    FROM instruments
+    ORDER BY ticker ASC
+"""
+
 # ===== CANDLES =====
 UPSERT_CANDLES_BATCH = """
     INSERT INTO candles 

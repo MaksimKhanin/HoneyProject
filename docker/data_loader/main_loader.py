@@ -11,7 +11,7 @@ import asyncio
 import signal
 import argparse
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from zoneinfo import ZoneInfo
 
 from logger import setup_logger
@@ -97,6 +97,8 @@ class Orchestrator:
         # 🗄️ Инициализация таблиц
         self.db.init_instrument_config_table()
         self.db.init_metrics_table()
+
+        self.sync_instruments()
 
         # 🚀 Запуск Admin UI в фоне (если включено)
         self._start_admin_ui_thread(host="0.0.0.0", port=8000)
@@ -188,13 +190,36 @@ class Orchestrator:
 
     async def run_cycle(self) -> List[Dict[str, Any]]:
         """Один цикл обработки всех активных инструментов."""
-        # Получаем конфигурации из БД (не из YAML!)
-        configs = self.db.get_enabled_instrument_configs()
-        if not configs:
-            self.logger.warning("⚠️ Нет активных инструментов в instrument_config")
+        # 📋 1. Загружаем ВСЕ инструменты из БД (не только из instrument_config)
+        all_instruments = self.db.get_all_instruments()
+        if not all_instruments:
+            self.logger.warning("⚠️ Нет инструментов в таблице instruments")
             return []
 
-        self.logger.info(f"📋 Обработка {len(configs)} инструментов...")
+        # 🔥 2. Загружаем дневные свечи (1d) для ВСЕХ инструментов
+        self.logger.info(f"📊 Загрузка 1d свечей для {len(all_instruments)} инструментов...")
+        for inst in all_instruments:
+            if not self.running:
+                break
+            ticker = inst['ticker']
+            try:
+                from price_loader import PriceLoader
+                loader = PriceLoader(
+                    ticker=ticker, timeframe="1d",
+                    broker=self.broker, db=self.db, logger=self.logger
+                )
+                await loader.load_incremental(history_depth_days=365)
+                await asyncio.sleep(0.05)  # Пауза чтобы не перегружать API
+            except Exception as e:
+                self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
+
+        # 📋 3. Получаем конфигурации из БД для остальных таймфреймов и стратегий
+        configs = self.db.get_enabled_instrument_configs()
+        if not configs:
+            self.logger.info("ℹ️ Нет активных инструментов в instrument_config (только 1d)")
+            return []
+
+        self.logger.info(f"📋 Обработка {len(configs)} инструментов из instrument_config...")
         results = []
 
         # Последовательная обработка (для 2GB VPS)
@@ -219,12 +244,35 @@ class Orchestrator:
 
         last_load_times: Dict[str, datetime] = {}  # Для таймера
         last_schedule_run: Dict[str, Any] = {}  # 🔥 НОВОЕ: для расписания
+        last_1d_load_time: Optional[datetime] = None  # Для загрузки 1d свечей
 
         while self.running:
             try:
-                configs = self.db.get_enabled_instrument_configs()
+                # 📊 1. Загружаем 1d свечи для ВСЕХ инструментов каждые 60 минут
                 now = datetime.now(self.tz)
+                if last_1d_load_time is None or now >= last_1d_load_time + timedelta(minutes=60):
+                    all_instruments = self.db.get_all_instruments()
+                    if all_instruments:
+                        self.logger.info(f"📊 Загрузка 1d свечей для {len(all_instruments)} инструментов...")
+                        for inst in all_instruments:
+                            if not self.running:
+                                break
+                            ticker = inst['ticker']
+                            try:
+                                from price_loader import PriceLoader
+                                loader = PriceLoader(
+                                    ticker=ticker, timeframe="1d",
+                                    broker=self.broker, db=self.db, logger=self.logger
+                                )
+                                await loader.load_incremental(history_depth_days=365)
+                                await asyncio.sleep(0.05)
+                            except Exception as e:
+                                self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
+                        last_1d_load_time = now
 
+                # 📋 2. Получаем конфигурации из БД для остальных таймфреймов и стратегий
+                configs = self.db.get_enabled_instrument_configs()
+                
                 to_load = []
                 for cfg in configs:
                     key = f"{cfg['ticker']}_{cfg['timeframe']}"
