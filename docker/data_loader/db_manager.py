@@ -244,6 +244,29 @@ class DBManager:
             cur.close()
             self._release_connection(conn)
 
+    def get_all_instruments(self) -> List[Dict[str, Any]]:
+        """Получить все инструменты из БД."""
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(Q.GET_ALL_INSTRUMENTS)
+            results = cur.fetchall()
+            return [
+                dict(zip(
+                    ["uid", "ticker", "name", "type", "class_code",
+                     "currency", "exchange", "min_price_increment", "lot",
+                     "api_trade_available", "updated_at"],
+                    row
+                ))
+                for row in results
+            ]
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка получения всех инструментов: {e}", exc_info=True)
+            return []
+        finally:
+            cur.close()
+            self._release_connection(conn)
+
     # ===== CANDLES =====
 
     def save_candles(self, candles_list: List[Dict[str, Any]],
