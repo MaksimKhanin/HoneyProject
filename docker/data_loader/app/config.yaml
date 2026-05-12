@@ -1,0 +1,203 @@
+database:
+  host: ${DB_HOST}
+  name: ${DB_NAME}
+  password: ${DB_PASSWORD}
+  port: ${DB_PORT}
+  schema: tink
+  user: ${DB_USER}
+instruments:
+- ticker: SBER
+  enabled: true
+  timeframes:
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 100
+    update_interval_minutes: 60
+    strategy: none
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: GAZP
+  enabled: true
+  timeframes:
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 100
+    update_interval_minutes: 60
+    strategy: none
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: VTBR
+  enabled: true
+  timeframes:
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 100
+    update_interval_minutes: 60
+    strategy: none
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: ROSN
+  enabled: true
+  timeframes:
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 100
+    update_interval_minutes: 60
+    strategy: none
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: VKCO
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 100
+    update_interval_minutes: 60
+    strategy: none
+- ticker: NVTK
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: PLZL
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: PHOR
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: USD000UTSTOM
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: MDMG
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+  - timeframe: 1m
+    enabled: false
+    history_depth_days: 7
+    update_interval_minutes: 5
+    strategy: sma_cross
+  - timeframe: 1h
+    enabled: true
+    history_depth_days: 180
+    update_interval_minutes: 60
+    strategy: rsi_oversold
+- ticker: BELU
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: ABIO
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: OZON
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: XAU
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: IMOEX
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: LCOc1
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: GMKN
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+- ticker: LNZL
+  enabled: true
+  timeframes:
+  - timeframe: 1d
+    enabled: true
+    history_depth_days: 365
+    update_interval_minutes: 1440
+    strategy: none
+settings:
+  config_reload_interval_seconds: 60
+  default_history_depth_days: 365
+  default_timeframe: 1d
+  log_file: logs/app.log
+  log_level: ${LOG_LEVEL:-INFO}
+  timezone: "Europe/Moscow"
+test_field: hello
+tinkoff:
+  token: ${TINKOFF_TOKEN}
+telegram:
+  enabled: true
+  token: ${TELEGRAM_BOT_TOKEN}  # <-- вынеси в .env!
+  chat_id: ${TELEGRAM_CHAT_ID}  # <-- вынеси в .env!
+  notify_on: ["BUY", "SELL"]    # на какие сигналы реагировать
+  disable_notification: false   # не издавать звук (для ночных сигналов)

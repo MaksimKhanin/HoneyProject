@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  db:
+    build: ./docker/psql-build
+    container_name: trade_db
+    restart: always
+    env_file:
+      - .env  # ✅ Берем ВСЕ переменные отсюда
+    environment:
+      # ✅ Явно маппим переменные для Postgres
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "127.0.0.1:5432:5432"  # ⚠️ Для продакшена лучше убрать или ограничить IP
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    mem_limit: 512M
+    memswap_limit: 512M
+    networks:
+      - trading_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  loader:
+    build: ./docker/data_loader
+    container_name: data_loader
+    restart: always
+    command: >
+      python main_loader.py
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TINKOFF_TOKEN=${TINKOFF_TOKEN}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      # 🔥 Включаем админку
+      - ENABLE_ADMIN=1          # ← Включаем Admin UI
+      - UI_LOG_LEVEL=DEBUG    # Меньше шума в логах
+      - PYTHONUNBUFFERED=1      # Чтобы логи шли сразу в stdout
+      - UI_USER=${UI_USER}
+      - UI_PASS=${UI_PASS}
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - ./logs:/app/logs
+     # - ./config.yaml:/app/config.yaml  # 🔥 Убрал :ro, теперь можно писать
+    ports:
+      # 🔥 Пробрасываем порт админки (только localhost!)
+      - "127.0.0.1:8000:8000"
+    networks:
+      - trading_net
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 300M  # Чуть больше под админку
+    memswap_limit: 300M
+
+volumes:
+  pgdata:
+
+networks:
+  trading_net:
+    driver: bridge

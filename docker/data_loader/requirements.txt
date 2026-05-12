@@ -1,0 +1,28 @@
+--index-url https://opensource.tbank.ru/api/v4/projects/238/packages/pypi/simple
+# Tinkoff SDK
+t-tech-investments
+
+# Database
+psycopg2-binary
+
+# Config
+pyyaml
+
+# Async
+asyncio
+
+# Logging (встроенный, но на всякий случай)
+python-json-logger
+
+aiohttp
+
+# Monitoring (опционально)
+# sentry-sdk  # Если нужен Sentry
+
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0

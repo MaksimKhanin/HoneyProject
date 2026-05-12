@@ -1,0 +1,121 @@
+{
+  "summary": {
+    "test_name": "integration_PIKK_1h",
+    "started_at": "2026-04-05T13:42:49.166682",
+    "finished_at": "2026-04-05T13:42:54.066966",
+    "total_duration_sec": 4.896,
+    "steps_total": 8,
+    "steps_passed": 8,
+    "steps_failed": 0,
+    "overall_success": true,
+    "success_rate": 100.0
+  },
+  "steps": [
+    {
+      "name": "validate_config",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "config_valid": true,
+        "test_params": {
+          "ticker": "PIKK",
+          "timeframe": "1h",
+          "strategy": "momentum"
+        }
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:49.167681"
+    },
+    {
+      "name": "init_database",
+      "success": true,
+      "duration_sec": 0.534,
+      "details": {
+        "db_connected": true,
+        "existing_candles": 63
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:49.701542"
+    },
+    {
+      "name": "init_broker",
+      "success": true,
+      "duration_sec": 3.229,
+      "details": {
+        "broker_connected": true,
+        "instrument_uid": "03d5e771-fc10-438e-8892-85a40733612d"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:52.930467"
+    },
+    {
+      "name": "fetch_instrument_info",
+      "success": true,
+      "duration_sec": 0.001,
+      "details": {
+        "uid": "03d5e771-fc10-438e-8892-85a40733612d",
+        "name": "ПИК СЗ (ПАО) ао",
+        "currency": "rub",
+        "exchange": "moex_mrng_evng_e_wknd_dlr"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:52.931482"
+    },
+    {
+      "name": "load_candles",
+      "success": true,
+      "duration_sec": 0.602,
+      "details": {
+        "candles_loaded": 14,
+        "candles_saved": 14,
+        "sample_price": 523.3
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:53.533683"
+    },
+    {
+      "name": "run_strategy",
+      "success": true,
+      "duration_sec": 0.203,
+      "details": {
+        "strategy_executed": true,
+        "signal": "HOLD",
+        "signals_saved": 0,
+        "data_points_used": null
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:53.736882"
+    },
+    {
+      "name": "verify_signal_in_db",
+      "success": true,
+      "duration_sec": 0.327,
+      "details": {
+        "signal_found": false,
+        "note": "Стратегия не сгенерировала торговый сигнал"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:54.063967"
+    },
+    {
+      "name": "performance_check",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "performance_ok": true,
+        "timings": {
+          "validate_config": 0.0,
+          "init_database": 0.534,
+          "init_broker": 3.229,
+          "fetch_instrument_info": 0.001,
+          "load_candles": 0.602,
+          "run_strategy": 0.203,
+          "verify_signal_in_db": 0.327
+        },
+        "issues": []
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:42:54.063967"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "summary": {
+    "test_name": "integration_SBER_1h",
+    "started_at": "2026-04-05T13:48:14.787025",
+    "finished_at": "2026-04-05T13:48:20.076377",
+    "total_duration_sec": 5.286,
+    "steps_total": 8,
+    "steps_passed": 8,
+    "steps_failed": 0,
+    "overall_success": true,
+    "success_rate": 100.0
+  },
+  "steps": [
+    {
+      "name": "validate_config",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "config_valid": true,
+        "test_params": {
+          "ticker": "SBER",
+          "timeframe": "1h",
+          "strategy": "momentum"
+        }
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:14.788023"
+    },
+    {
+      "name": "init_database",
+      "success": true,
+      "duration_sec": 0.605,
+      "details": {
+        "db_connected": true,
+        "existing_candles": 66
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:15.393388"
+    },
+    {
+      "name": "init_broker",
+      "success": true,
+      "duration_sec": 3.435,
+      "details": {
+        "broker_connected": true,
+        "instrument_uid": "e6123145-9665-43e0-8413-cd61b8aa9b13"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:18.828407"
+    },
+    {
+      "name": "fetch_instrument_info",
+      "success": true,
+      "duration_sec": 0.002,
+      "details": {
+        "uid": "e6123145-9665-43e0-8413-cd61b8aa9b13",
+        "name": "Сбер Банк",
+        "currency": "rub",
+        "exchange": "moex_mrng_evng_e_wknd_dlr"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:18.830395"
+    },
+    {
+      "name": "load_candles",
+      "success": true,
+      "duration_sec": 0.865,
+      "details": {
+        "candles_loaded": 14,
+        "candles_saved": 14,
+        "sample_price": 315.11
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:19.695125"
+    },
+    {
+      "name": "run_strategy",
+      "success": true,
+      "duration_sec": 0.303,
+      "details": {
+        "strategy_executed": true,
+        "signal": "HOLD",
+        "signals_saved": 0,
+        "data_points_used": null
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:19.998374"
+    },
+    {
+      "name": "verify_signal_in_db",
+      "success": true,
+      "duration_sec": 0.076,
+      "details": {
+        "signal_found": true,
+        "signal_type": "HOLD",
+        "price": 315.11,
+        "candle_time": "2026-04-05T10:00:00"
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:20.074378"
+    },
+    {
+      "name": "performance_check",
+      "success": true,
+      "duration_sec": 0.0,
+      "details": {
+        "performance_ok": true,
+        "timings": {
+          "validate_config": 0.0,
+          "init_database": 0.605,
+          "init_broker": 3.435,
+          "fetch_instrument_info": 0.002,
+          "load_candles": 0.865,
+          "run_strategy": 0.303,
+          "verify_signal_in_db": 0.076
+        },
+        "issues": []
+      },
+      "error": null,
+      "timestamp": "2026-04-05T13:48:20.074378"
+    }
+  ]
+}

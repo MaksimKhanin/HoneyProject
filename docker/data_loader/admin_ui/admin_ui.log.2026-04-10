@@ -1,0 +1,253 @@
+2026-04-08 19:13:13,552 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-08 19:13:13,581 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-08 19:13:27,660 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-08 19:13:27,715 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-08 19:13:27,715 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-08 19:13:27,715 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-08 19:13:27,855 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-08 19:13:27,855 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-08 19:13:27,855 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-08 19:13:27,945 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-08 19:13:27,945 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-08 19:13:28,020 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-08 19:13:28,021 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-08 19:13:28,021 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-08 19:13:28,022 | DEBUG | AdminUI |    📊 VKCO: PnL=-24010.0, strategy=momentum
+2026-04-08 19:13:28,090 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-08 19:13:31,001 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-08 19:13:31,053 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-08 19:13:31,053 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-08 19:13:31,053 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-08 19:13:31,139 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-08 19:13:31,139 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-08 19:13:31,139 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-08 19:13:31,194 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-08 19:13:31,194 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-08 19:13:31,242 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-08 19:13:31,243 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-08 19:13:31,243 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-08 19:13:31,243 | DEBUG | AdminUI |    📊 VKCO: PnL=-24010.0, strategy=momentum
+2026-04-08 19:13:31,293 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-08 19:13:42,557 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-08 19:13:42,619 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-08 19:13:42,619 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-08 19:13:42,619 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-08 19:13:42,690 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-08 19:13:42,690 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-08 19:13:42,690 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-08 19:13:42,754 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-08 19:13:42,754 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-08 19:13:42,803 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-08 19:13:42,803 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-08 19:13:42,804 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=all
+2026-04-08 19:13:42,804 | DEBUG | AdminUI |    📊 VKCO: PnL=-24115.0, strategy=momentum
+2026-04-08 19:13:42,869 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=all
+2026-04-09 08:12:14,752 | ERROR | AdminUI | ❌ API error: (<StatusCode.UNAVAILABLE: (14, 'unavailable')>, 'DNS resolution failed for invest-public-api.tinkoff.ru: UNAVAILABLE: getaddrinfo: WSA Error (No such host is known.\r\n -- 11001)', None)
+2026-04-09 11:55:54,818 | ERROR | AdminUI | ❌ API error: (<StatusCode.UNAVAILABLE: (14, 'unavailable')>, 'DNS resolution failed for invest-public-api.tinkoff.ru: UNAVAILABLE: getaddrinfo: WSA Error (No such host is known.\r\n -- 11001)', None)
+2026-04-09 12:53:20,982 | ERROR | AdminUI | ❌ API error: (<StatusCode.UNAVAILABLE: (14, 'unavailable')>, 'DNS resolution failed for invest-public-api.tinkoff.ru: UNAVAILABLE: getaddrinfo: WSA Error (No such host is known.\r\n -- 11001)', None)
+2026-04-09 14:20:50,720 | ERROR | AdminUI | ❌ API error: (<StatusCode.UNAVAILABLE: (14, 'unavailable')>, 'DNS resolution failed for invest-public-api.tinkoff.ru: UNAVAILABLE: getaddrinfo: WSA Error (No such host is known.\r\n -- 11001)', None)
+2026-04-09 15:41:06,705 | ERROR | AdminUI | ❌ API error: (<StatusCode.UNAVAILABLE: (14, 'unavailable')>, 'DNS resolution failed for invest-public-api.tinkoff.ru: UNAVAILABLE: getaddrinfo: WSA Error (No such host is known.\r\n -- 11001)', None)
+2026-04-09 18:53:33,929 | ERROR | AdminUI | ❌ Ошибка получения конфигов: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\admin_ui\core.py", line 86, in get_all_instrument_configs
+    cur.execute("""
+psycopg2.OperationalError: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+2026-04-09 18:59:13,070 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 18:59:13,071 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 18:59:57,019 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 18:59:57,047 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:00:03,885 | ERROR | DBManager | ❌ Пиздец при создании пула: could not translate host name "trade_db" to address: Name or service not known
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\db_manager.py", line 84, in _init_pool
+    self.conn_pool = pool.SimpleConnectionPool(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "trade_db" to address: Name or service not known
+
+2026-04-09 19:00:16,437 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:00:16,438 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:00:18,316 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:00:18,349 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:00:24,229 | ERROR | DBManager | ❌ Пиздец при создании пула: could not translate host name "trade_db" to address: Name or service not known
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\db_manager.py", line 84, in _init_pool
+    self.conn_pool = pool.SimpleConnectionPool(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 59, in __init__
+    self._connect()
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\pool.py", line 63, in _connect
+    conn = psycopg2.connect(*self._args, **self._kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Khanin Maksim\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: could not translate host name "trade_db" to address: Name or service not known
+
+2026-04-09 19:00:41,569 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:00:41,570 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:00:43,007 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:00:43,039 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:05:24,268 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:05:24,269 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:05:25,918 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:05:25,946 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:05:42,261 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-09 19:05:42,351 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-09 19:05:42,352 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-09 19:05:42,352 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-09 19:05:42,512 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-09 19:05:42,513 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-09 19:05:42,513 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-09 19:05:42,580 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-09 19:05:42,580 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-09 19:05:42,640 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-09 19:05:42,640 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-09 19:05:42,640 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:05:42,641 | DEBUG | AdminUI |    📊 VKCO: PnL=-27965.0, strategy=momentum
+2026-04-09 19:05:42,750 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:11:27,807 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:11:27,807 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:11:29,684 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:11:29,718 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:11:36,207 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-09 19:11:36,281 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-09 19:11:36,281 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-09 19:11:36,282 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-09 19:11:36,368 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-09 19:11:36,368 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-09 19:11:36,368 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-09 19:11:36,447 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-09 19:11:36,447 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-09 19:11:36,514 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-09 19:11:36,514 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-09 19:11:36,514 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:11:36,515 | DEBUG | AdminUI |    📊 VKCO: PnL=-27930.0, strategy=momentum
+2026-04-09 19:11:36,601 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:21:34,027 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:21:34,027 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:21:38,156 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:21:38,187 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:22:06,945 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-09 19:22:07,032 | INFO | AdminUI | 🔍 Tracked tickers from DB: 2 — ['SBER', 'VKCO']...
+2026-04-09 19:22:07,033 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-09 19:22:07,033 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-09 19:22:07,163 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-09 19:22:07,164 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-09 19:22:07,164 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-09 19:22:07,218 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-09 19:22:07,218 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-09 19:22:07,281 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-09 19:22:07,282 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-09 19:22:07,282 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:22:07,282 | DEBUG | AdminUI |    📊 VKCO: PnL=-27370.0, strategy=momentum
+2026-04-09 19:22:07,351 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-09 19:23:25,918 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:23:25,920 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:23:27,645 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:23:27,677 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-09 19:26:19,833 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-09 19:26:19,835 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-09 19:26:21,538 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-09 19:26:21,569 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 06:49:18,188 | ERROR | AdminUI | ❌ Ошибка получения конфигов: could not receive data from server: Software caused connection abort (0x00002745/10053)
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\admin_ui\core.py", line 86, in get_all_instrument_configs
+    cur.execute("""
+psycopg2.OperationalError: could not receive data from server: Software caused connection abort (0x00002745/10053)
+
+2026-04-10 06:49:56,939 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-10 06:49:56,989 | INFO | AdminUI | 🔍 Tracked tickers from DB: 3 — ['MDMG', 'SBER', 'VKCO']...
+2026-04-10 06:49:56,990 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-10 06:49:56,990 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-10 06:49:57,121 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-10 06:49:57,121 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-10 06:49:57,121 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-10 06:49:57,201 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-10 06:49:57,201 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-10 06:49:57,284 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-10 06:49:57,285 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-10 06:49:57,285 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 06:49:57,285 | DEBUG | AdminUI |    📊 VKCO: PnL=-26845.0, strategy=momentum
+2026-04-10 06:49:57,338 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 06:59:50,876 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 06:59:50,877 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-10 06:59:53,573 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-10 06:59:53,602 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 07:00:07,286 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-10 07:00:07,340 | INFO | AdminUI | 🔍 Tracked tickers from DB: 3 — ['MDMG', 'SBER', 'VKCO']...
+2026-04-10 07:00:07,340 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-10 07:00:07,340 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-10 07:00:07,461 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-10 07:00:07,461 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-10 07:00:07,462 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-10 07:00:07,520 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-10 07:00:07,521 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-10 07:00:07,573 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-10 07:00:07,573 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-10 07:00:07,573 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 07:00:07,573 | DEBUG | AdminUI |    📊 VKCO: PnL=-26670.0, strategy=momentum
+2026-04-10 07:00:07,649 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 07:02:51,856 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 07:02:51,856 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-10 07:02:53,524 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-10 07:02:53,550 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 07:02:58,278 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-10 07:02:58,338 | INFO | AdminUI | 🔍 Tracked tickers from DB: 3 — ['MDMG', 'SBER', 'VKCO']...
+2026-04-10 07:02:58,338 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-10 07:02:58,338 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-10 07:02:58,413 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-10 07:02:58,413 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-10 07:02:58,413 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-10 07:02:58,461 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-10 07:02:58,461 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-10 07:02:58,513 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-10 07:02:58,513 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-10 07:02:58,513 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 07:02:58,513 | DEBUG | AdminUI |    📊 VKCO: PnL=-26670.0, strategy=momentum
+2026-04-10 07:02:58,571 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 07:04:46,286 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 07:04:46,286 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-10 07:04:47,830 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-10 07:04:47,858 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 07:08:40,591 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 07:08:40,591 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-10 07:08:42,213 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-10 07:08:42,241 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 07:11:32,220 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 07:11:32,221 | INFO | AdminUI | ✅ Admin UI остановлен
+2026-04-10 07:11:33,602 | INFO | AdminUI | 🌐 Admin UI доступен на http://0.0.0.0:8000
+2026-04-10 07:11:33,631 | INFO | AdminUI | 🚀 Admin UI запущен
+2026-04-10 07:16:17,090 | ERROR | AdminUI | ❌ Ошибка получения конфигов: could not receive data from server: Software caused connection abort (0x00002745/10053)
+Traceback (most recent call last):
+  File "C:\Users\Khanin Maksim\PycharmProjects\honeyProject\docker\data_loader\admin_ui\core.py", line 86, in get_all_instrument_configs
+    cur.execute("""
+psycopg2.OperationalError: could not receive data from server: Software caused connection abort (0x00002745/10053)
+
+2026-04-10 07:18:06,921 | INFO | AdminUI | 🔍 Starting position fetch: account_filter=all
+2026-04-10 07:18:06,983 | INFO | AdminUI | 🔍 Tracked tickers from DB: 3 — ['MDMG', 'SBER', 'VKCO']...
+2026-04-10 07:18:06,983 | INFO | AdminUI | 🔍 Fetching positions for ALL 3 accounts
+2026-04-10 07:18:06,983 | DEBUG | AdminUI | 🔍 Fetching positions for account 2040855112...
+2026-04-10 07:18:07,056 | DEBUG | AdminUI |    📦 Raw positions from broker: 14
+2026-04-10 07:18:07,056 | DEBUG | AdminUI |    ✅ Matched: VKCO → strategy=momentum
+2026-04-10 07:18:07,056 | DEBUG | AdminUI | 🔍 Fetching positions for account 2205447188...
+2026-04-10 07:18:07,112 | DEBUG | AdminUI |    📦 Raw positions from broker: 4
+2026-04-10 07:18:07,112 | DEBUG | AdminUI | 🔍 Fetching positions for account 2312570013...
+2026-04-10 07:18:07,160 | DEBUG | AdminUI |    📦 Raw positions from broker: 1
+2026-04-10 07:18:07,161 | INFO | AdminUI | ✅ Final positions count: 1
+2026-04-10 07:18:07,162 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 07:18:07,162 | DEBUG | AdminUI |    📊 VKCO: PnL=-26460.0, strategy=momentum
+2026-04-10 07:18:07,221 | INFO | AdminUI | 🎨 Rendering portfolio: 1 positions, tf_filter=1d
+2026-04-10 09:20:28,468 | INFO | AdminUI | 🔌 Закрытие соединений с БД...
+2026-04-10 09:20:28,468 | INFO | AdminUI | ✅ Admin UI остановлен

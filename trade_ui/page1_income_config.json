@@ -1,0 +1,8 @@
+{
+    "tickers": "PHOR, LNZL, ABIO, IMOEX, SBER, VTBR",
+    "timeframe": "1d",
+    "price_type": "(Low+High+Close)/3",
+    "benchmarks": "IMOEX",
+    "apply_factor": true,
+    "days_back": 444
+}
