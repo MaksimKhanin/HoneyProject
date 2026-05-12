@@ -18,7 +18,7 @@ from logger import setup_logger
 from constants import (
     Timeframe, StrategyName, SignalType,
     DEFAULT_LOG_LEVEL, DEFAULT_TIMEZONE,
-    TIMEFRAMES
+    TIMEFRAMES, EXCHANGES_FOR_1D
 )
 from db_manager import DBManager
 from T_con import TConnector
@@ -232,22 +232,31 @@ class Orchestrator:
             self.logger.warning("⚠️ Нет инструментов в таблице instruments")
             return []
 
-        # 🔥 2. Загружаем дневные свечи (1d) для ВСЕХ инструментов
-        self.logger.info(f"📊 Загрузка 1d свечей для {len(all_instruments)} инструментов...")
-        for inst in all_instruments:
-            if not self.running:
-                break
-            ticker = inst['ticker']
-            try:
-                from price_loader import PriceLoader
-                loader = PriceLoader(
-                    ticker=ticker, timeframe="1d",
-                    broker=self.broker, db=self.db, logger=self.logger
-                )
-                await loader.load_incremental(history_depth_days=365)
-                await asyncio.sleep(0.05)  # Пауза чтобы не перегружать API
-            except Exception as e:
-                self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
+        # 🔥 2. Загружаем дневные свечи (1d) для инструментов из разрешённых бирж
+        # Фильтр: exchange должен быть в EXCHANGES_FOR_1D
+        instruments_for_1d = [
+            inst for inst in all_instruments 
+            if inst.get('exchange') in EXCHANGES_FOR_1D
+        ]
+        
+        if instruments_for_1d:
+            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов (биржи: {EXCHANGES_FOR_1D})...")
+            for inst in instruments_for_1d:
+                if not self.running:
+                    break
+                ticker = inst['ticker']
+                try:
+                    from price_loader import PriceLoader
+                    loader = PriceLoader(
+                        ticker=ticker, timeframe="1d",
+                        broker=self.broker, db=self.db, logger=self.logger
+                    )
+                    await loader.load_incremental(history_depth_days=365)
+                    await asyncio.sleep(0.05)  # Пауза чтобы не перегружать API
+                except Exception as e:
+                    self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
+        else:
+            self.logger.info("ℹ️ Нет инструментов из разрешённых бирж для загрузки 1d")
 
         # 📋 3. Получаем конфигурации из БД для остальных таймфреймов и стратегий
         configs = self.db.get_enabled_instrument_configs()
@@ -284,27 +293,35 @@ class Orchestrator:
 
         while self.running:
             try:
-                # 📊 1. Загружаем 1d свечи для ВСЕХ инструментов каждые 60 минут
+                # 📊 1. Загружаем 1d свечи для инструментов из разрешённых бирж каждые 60 минут
                 now = datetime.now(self.tz)
                 if last_1d_load_time is None or now >= last_1d_load_time + timedelta(minutes=60):
                     all_instruments = self.db.get_all_instruments()
                     if all_instruments:
-                        self.logger.info(f"📊 Загрузка 1d свечей для {len(all_instruments)} инструментов...")
-                        for inst in all_instruments:
-                            if not self.running:
-                                break
-                            ticker = inst['ticker']
-                            try:
-                                from price_loader import PriceLoader
-                                loader = PriceLoader(
-                                    ticker=ticker, timeframe="1d",
-                                    broker=self.broker, db=self.db, logger=self.logger
-                                )
-                                await loader.load_incremental(history_depth_days=365)
-                                await asyncio.sleep(0.05)
-                            except Exception as e:
-                                self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
-                        last_1d_load_time = now
+                        # Фильтр по биржам
+                        instruments_for_1d = [
+                            inst for inst in all_instruments 
+                            if inst.get('exchange') in EXCHANGES_FOR_1D
+                        ]
+                        if instruments_for_1d:
+                            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов (биржи: {EXCHANGES_FOR_1D})...")
+                            for inst in instruments_for_1d:
+                                if not self.running:
+                                    break
+                                ticker = inst['ticker']
+                                try:
+                                    from price_loader import PriceLoader
+                                    loader = PriceLoader(
+                                        ticker=ticker, timeframe="1d",
+                                        broker=self.broker, db=self.db, logger=self.logger
+                                    )
+                                    await loader.load_incremental(history_depth_days=365)
+                                    await asyncio.sleep(0.05)
+                                except Exception as e:
+                                    self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
+                            last_1d_load_time = now
+                        else:
+                            self.logger.debug("ℹ️ Нет инструментов из разрешённых бирж для загрузки 1d")
 
                 # 📋 2. Получаем конфигурации из БД для остальных таймфреймов и стратегий
                 configs = self.db.get_enabled_instrument_configs()

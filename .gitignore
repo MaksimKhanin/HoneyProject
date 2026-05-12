@@ -1,17 +1,8 @@
 ```
 # Compiled Python files
-__pycache__/
 *.pyc
+__pycache__/
 
-# Dependencies
-.venv/
-venv/
-
-# Logs and temp files
-*.log
-*.tmp
-
-# Editors
-.vscode/
-.idea/
+# Docker related
+docker/data_loader/__pycache__/
 ```
