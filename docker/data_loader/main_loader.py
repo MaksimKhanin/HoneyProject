@@ -98,13 +98,13 @@ class Orchestrator:
         self.db.init_instrument_config_table()
         self.db.init_metrics_table()
 
-        self.sync_instruments()
-
         # 🚀 Запуск Admin UI в фоне (если включено)
         self._start_admin_ui_thread(host="0.0.0.0", port=8000)
 
         # 📡 Сигналы завершения
         self._setup_signals()
+
+        # 🔥 Синхронизация инструментов (теперь вызывается из async main())
 
     def _setup_signals(self):
         """Настройка обработчиков SIGINT/SIGTERM."""
@@ -114,11 +114,47 @@ class Orchestrator:
             self.running = False
             # Запускаем close() в отдельном потоке, чтобы не блокировать сигнал
             import threading
-            t = threading.Thread(target=self.close, daemon=True)
+            import asyncio
+            loop = None
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass  # Нет активного цикла
+
+            if loop and loop.is_running():
+                # Если цикл запущен, создаём новый цикл в потоке
+                t = threading.Thread(target=self._run_close_in_thread, daemon=True)
+            else:
+                t = threading.Thread(target=self.close_sync, daemon=True)
             t.start()
 
         signal.signal(signal.SIGINT, handler)  # Ctrl+C
         signal.signal(signal.SIGTERM, handler)  # docker stop / kill
+
+    def _run_close_in_thread(self):
+        """Запускает async close() в новом цикле внутри потока."""
+        import asyncio
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            new_loop.run_until_complete(self.close())
+        finally:
+            new_loop.close()
+
+    def close_sync(self):
+        """Синхронная обёртка для close() для использования в сигналах."""
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if not loop.is_running():
+                loop.run_until_complete(self.close())
+                return
+        except Exception:
+            pass
+        # Если цикл запущен (main thread), используем новый цикл
+        new_loop = asyncio.new_event_loop()
+        new_loop.run_until_complete(self.close())
+        new_loop.close()
 
     async def _load_single_instrument(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Загрузка одного инструмента + запуск стратегии (новая архитектура)."""
@@ -388,11 +424,11 @@ class Orchestrator:
         # ✅ Все условия расписания выполнены (или не заданы)
         return True
 
-    def sync_instruments(self):
+    async def sync_instruments(self):
         """Синхронизация справочника инструментов из Tinkoff в БД."""
         self.logger.info("🔄 Синхронизация инструментов...")
         try:
-            asyncio.run(self.broker.refresh_instruments_cache())
+            await self.broker.refresh_instruments_cache()
             instruments = list(self.broker._instruments_cache.values())
             saved = self.db.upsert_instruments_batch(instruments)
             self.logger.info(f"✅ Синхронизировано {saved} инструментов")
@@ -471,7 +507,7 @@ class Orchestrator:
         except Exception as e:
             self.logger.error(f"❌ Ошибка запуска Admin UI: {e}", exc_info=True)
 
-    def close(self):
+    async def close(self):
         """Корректное завершение всех компонентов."""
         self.logger.info("🔌 Завершение работы...")
         self.running = False  # Сигнал циклу остановки
@@ -494,14 +530,14 @@ class Orchestrator:
         # 3. Закрываем Telegram (если есть)
         if self.tg and hasattr(self.tg, 'close'):
             try:
-                asyncio.run(self.tg.close())
+                await self.tg.close()
             except:
                 pass
 
         # 4. Закрываем брокер (если есть метод close)
         if self.broker and hasattr(self.broker, 'close'):
             try:
-                asyncio.run(self.broker.close())
+                await self.broker.close()
             except:
                 pass
 
@@ -566,16 +602,18 @@ async def main():
             sys.exit(0 if success else 1)
 
         elif args.sync:
-            orchestrator.sync_instruments()
+            await orchestrator.sync_instruments()
 
         elif args.once:
+            await orchestrator.sync_instruments()
             await orchestrator.run_cycle()
 
         else:
+            await orchestrator.sync_instruments()
             await orchestrator.run_continuous()
 
     finally:
-        orchestrator.close()
+        await orchestrator.close()
 
 
 if __name__ == "__main__":
