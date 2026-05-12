@@ -1,9 +1,0 @@
-{
-    "tickers": "PLZL",
-    "timeframe": "1d",
-    "price_type": "(Low+High+Close)/3",
-    "benchmarks": "",
-    "apply_factor": false,
-    "days_back": 444,
-    "rolling_window": 20
-}
