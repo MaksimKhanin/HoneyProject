@@ -1,8 +1,54 @@
 ```
-# Compiled Python files
-*.pyc
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.ENV.local
+.env
+.env.local
+.env.*
+.env.local.*
+.python-version
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage/
+htmlcov/
 
-# Docker related
-docker/data_loader/__pycache__/
+# Docker
+.dockerenv
+Dockerfile*
+docker-compose*
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+target/
+.gradle/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 ```

@@ -108,6 +108,14 @@ UPSERT_SIGNAL = """
     RETURNING id
 """
 
+GET_RECENT_SIGNALS = """
+    SELECT ticker, timeframe, strategy, signal, price, candle_time, created_at, metadata
+    FROM signals
+    WHERE signal IN ('BUY', 'SELL', 'CLOSE_BUY', 'CLOSE_SELL', 'CLOSE_ALL')
+    ORDER BY candle_time DESC
+    LIMIT %s
+"""
+
 # ===== SCHEMA =====
 CREATE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS {schema}"
 GRANT_SCHEMA = "GRANT ALL ON SCHEMA {schema} TO {user}"

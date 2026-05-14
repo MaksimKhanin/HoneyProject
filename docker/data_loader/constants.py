@@ -139,6 +139,7 @@ class SignalType(StrEnum):
     BUY = "BUY"
     SELL = "SELL"
     HOLD = "HOLD"
+    PASS = "PASS"
     ERROR = "ERROR"
     CLOSE_BUY = "CLOSE_BUY"
     CLOSE_SELL = "CLOSE_SELL"
