@@ -31,6 +31,7 @@ SIGNAL_MAP = {
     CoreSignal.BUY: "BUY",
     CoreSignal.SELL: "SELL",
     CoreSignal.HOLD: "HOLD",
+    CoreSignal.PASS: "PASS",
     CoreSignal.ERROR: "ERROR",
     CoreSignal.CLOSE_BUY: "CLOSE_BUY",
     CoreSignal.CLOSE_SELL: "CLOSE_SELL",
@@ -238,9 +239,16 @@ class StrategyRunner:
                 self.stats["orders_executed"] += 1
                 self.logger.info(f"✅ Ордер исполнен: {exec_result.get('message')}")
 
-            # 🔥 5. Сохранение сигнала в БД (если сигнал торговый)
-            if SignalType.is_tradable(signal_str) and core_signal != CoreSignal.HOLD:
-                metadata = {
+            # 🔥 5. Сохранение сигнала в БД (ВСЕ сигналы: BUY, SELL, HOLD, PASS, CLOSE_*)
+            # is_tradable проверяет только торговые сигналы, но мы сохраняем ВСЕ для логирования
+            saved = self.db.save_signal(
+                ticker=self.ticker,
+                timeframe=self.timeframe,
+                strategy=self.strategy_name,
+                signal=signal_str,  # Строка для БД
+                price=last_bar.close,
+                candle_time=last_bar.time,
+                metadata={
                     SIGNAL_META_KEYS.get(k, k): v
                     for k, v in {
                         "strategy": self.strategy_name,
@@ -250,23 +258,14 @@ class StrategyRunner:
                         "order_id": exec_result.get("order", {}).get("order_id"),
                     }.items()
                 }
+            )
 
-                saved = self.db.save_signal(
-                    ticker=self.ticker,
-                    timeframe=self.timeframe,
-                    strategy=self.strategy_name,
-                    signal=signal_str,  # Строка для БД
-                    price=last_bar.close,
-                    candle_time=last_bar.time,
-                    metadata=metadata
+            if saved:
+                self.stats["signals_saved"] += 1
+                self.logger.info(
+                    f"⚡ СИГНАЛ: {self.ticker}/{self.timeframe} "
+                    f"[{self.strategy_name}] → {signal_str} @ {last_bar.close}"
                 )
-
-                if saved:
-                    self.stats["signals_saved"] += 1
-                    self.logger.info(
-                        f"⚡ СИГНАЛ: {self.ticker}/{self.timeframe} "
-                        f"[{self.strategy_name}] → {signal_str} @ {last_bar.close}"
-                    )
 
             self.stats["signals_generated"] += 1
             self.stats["last_run_time"] = datetime.now()
