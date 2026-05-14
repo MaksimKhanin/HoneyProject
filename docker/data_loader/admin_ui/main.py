@@ -30,11 +30,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="Honey Loader Admin UI")
 
 # === Подключаем роутеры ===
-from admin_ui.pages import loader, strategies, portfolio
+from admin_ui.pages import loader, strategies, portfolio, signals
 
 app.include_router(loader.router)
 app.include_router(strategies.router)
 app.include_router(portfolio.router)
+app.include_router(signals.router)
 
 # === Health check endpoint (для мониторинга) ===
 @app.get("/health")

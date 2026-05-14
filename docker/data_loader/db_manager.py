@@ -420,6 +420,33 @@ class DBManager:
             self.logger.error(f"❌ Ошибка сохранения сигнала {ticker}/{timeframe}: {e}")
             return False
 
+    def get_recent_signals(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Получает последние торговые сигналы."""
+        conn = self._get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(Q.GET_RECENT_SIGNALS, (limit,))
+            results = cur.fetchall()
+            return [
+                {
+                    'ticker': row[0],
+                    'timeframe': row[1],
+                    'strategy': row[2],
+                    'signal': row[3],
+                    'price': float(row[4]),
+                    'candle_time': self._from_utc(row[5]) if row[5] else None,
+                    'created_at': self._from_utc(row[6]) if row[6] else None,
+                    'metadata': row[7] or {}
+                }
+                for row in results
+            ]
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка получения сигналов: {e}")
+            return []
+        finally:
+            cur.close()
+            self._release_connection(conn)
+
 
     # ===== Утилиты =====
 
