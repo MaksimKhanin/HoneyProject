@@ -18,7 +18,7 @@ from logger import setup_logger
 from constants import (
     Timeframe, StrategyName, SignalType,
     DEFAULT_LOG_LEVEL, DEFAULT_TIMEZONE,
-    TIMEFRAMES, EXCHANGES_FOR_1D
+    TIMEFRAMES
 )
 from db_manager import DBManager
 from T_con import TConnector
@@ -233,14 +233,11 @@ class Orchestrator:
             return []
 
         # 🔥 2. Загружаем дневные свечи (1d) для инструментов из разрешённых бирж
-        # Фильтр: exchange должен быть в EXCHANGES_FOR_1D
         instruments_for_1d = [
-            inst for inst in all_instruments 
-            if inst.get('exchange') in EXCHANGES_FOR_1D
-        ]
+            inst for inst in all_instruments ]
         
         if instruments_for_1d:
-            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов (биржи: {EXCHANGES_FOR_1D})...")
+            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов ")
             for inst in instruments_for_1d:
                 if not self.running:
                     break
@@ -300,11 +297,10 @@ class Orchestrator:
                     if all_instruments:
                         # Фильтр по биржам
                         instruments_for_1d = [
-                            inst for inst in all_instruments 
-                            if inst.get('exchange') in EXCHANGES_FOR_1D
+                            inst for inst in all_instruments
                         ]
                         if instruments_for_1d:
-                            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов (биржи: {EXCHANGES_FOR_1D})...")
+                            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов")
                             for inst in instruments_for_1d:
                                 if not self.running:
                                     break
