@@ -134,7 +134,14 @@ async def page_signals(
                 for k, v in metadata.items():
                     if v is not None and k not in ("strategy", "window"):
                         meta_lines.append(f"{k}: {v}")
-            meta_str = ", ".join(meta_lines[:3]) if meta_lines else ""
+            meta_str = ", ".join(meta_lines) if meta_lines else "—"
+            meta_full = meta_str
+            
+            # Ограничиваем длину для отображения в таблице, но сохраняем полную версию для tooltip
+            if len(meta_str) > 50:
+                meta_display = meta_str[:47] + "..."
+            else:
+                meta_display = meta_str
             
             signals_html += f'''
             <tr style="border-bottom:1px solid #333;">
@@ -146,7 +153,7 @@ async def page_signals(
                 <td style="padding:8px;text-align:right;">{fmt(price, ",.4f")}</td>
                 <td style="padding:8px;text-align:center;">{fmt_datetime(candle_time)}</td>
                 <td style="padding:8px;text-align:center;">{fmt_datetime(created_at)}</td>
-                <td style="padding:8px;font-size:0.8em;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{meta_str}</td>
+                <td style="padding:8px;font-size:0.8em;color:#aaa;min-width:250px;max-width:400px;overflow-wrap:break-word;word-wrap:break-word;white-space:normal;" title="{meta_full}">{meta_display}</td>
             </tr>
             '''
     else:
