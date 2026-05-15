@@ -111,7 +111,7 @@ UPSERT_SIGNAL = """
 GET_RECENT_SIGNALS = """
     SELECT ticker, timeframe, strategy, signal, price, candle_time, created_at, metadata
     FROM signals
-    WHERE signal IN ('BUY', 'SELL', 'CLOSE_BUY', 'CLOSE_SELL', 'CLOSE_ALL')
+    WHERE signal IN ('BUY', 'SELL', 'HOLD', 'CLOSE_BUY', 'CLOSE_SELL', 'CLOSE_ALL', 'PASS')
     ORDER BY candle_time DESC
     LIMIT %s
 """
