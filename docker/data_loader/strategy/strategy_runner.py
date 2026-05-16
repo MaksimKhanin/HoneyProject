@@ -104,12 +104,13 @@ class StrategyRunner:
         }
 
     def _resolve_strategy_class(self) -> Type[BaseStrategy]:
-        """Фабрика: возвращает класс стратегии по имени."""
         # 🔥 Здесь регистрируешь новые стратегии
         from strategy.strategies.trailing_trend import TrailingTrendStrategy
+        from strategy.strategies.trend_hunter import TrendHunterStrategy
 
         registry = {
             "TrailingTrend": TrailingTrendStrategy,
+            "TrendHunter": TrendHunterStrategy,
             # Добавляй новые: "MyStrat": MyStratClass,
         }
 
@@ -241,6 +242,9 @@ class StrategyRunner:
 
             # 🔥 5. Сохранение сигнала в БД (ВСЕ сигналы: BUY, SELL, HOLD, PASS, CLOSE_*)
             # is_tradable проверяет только торговые сигналы, но мы сохраняем ВСЕ для логирования
+            # 🔥 Формируем metadata из релевантных метрик стратегии + системных данных
+            strategy_metrics = notification_context or {}
+
             saved = self.db.save_signal(
                 ticker=self.ticker,
                 timeframe=self.timeframe,
@@ -249,14 +253,9 @@ class StrategyRunner:
                 price=last_bar.close,
                 candle_time=last_bar.time,
                 metadata={
-                    SIGNAL_META_KEYS.get(k, k): v
-                    for k, v in {
-                        "strategy": self.strategy_name,
-                        "window": self.strategy_window,
-                        "candles_count": len(bars),
-                        "execution_mode": self.executor.mode.value,
-                        "order_id": exec_result.get("order", {}).get("order_id"),
-                    }.items()
+                    **strategy_metrics,  # 🔥 Данные из _get_relevant_metrics()
+                    "execution_mode": self.executor.mode.value,
+                    "order_id": exec_result.get("order", {}).get("order_id"),
                 }
             )
 

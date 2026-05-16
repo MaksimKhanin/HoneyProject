@@ -226,39 +226,10 @@ class Orchestrator:
 
     async def run_cycle(self) -> List[Dict[str, Any]]:
         """Один цикл обработки всех активных инструментов."""
-        # 📋 1. Загружаем ВСЕ инструменты из БД (не только из instrument_config)
-        all_instruments = self.db.get_all_instruments()
-        if not all_instruments:
-            self.logger.warning("⚠️ Нет инструментов в таблице instruments")
-            return []
-
-        # 🔥 2. Загружаем дневные свечи (1d) для инструментов из разрешённых бирж
-        instruments_for_1d = [
-            inst for inst in all_instruments ]
-        
-        if instruments_for_1d:
-            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов ")
-            for inst in instruments_for_1d:
-                if not self.running:
-                    break
-                ticker = inst['ticker']
-                try:
-                    from price_loader import PriceLoader
-                    loader = PriceLoader(
-                        ticker=ticker, timeframe="1d",
-                        broker=self.broker, db=self.db, logger=self.logger
-                    )
-                    await loader.load_incremental(history_depth_days=365)
-                    await asyncio.sleep(0.05)  # Пауза чтобы не перегружать API
-                except Exception as e:
-                    self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
-        else:
-            self.logger.info("ℹ️ Нет инструментов из разрешённых бирж для загрузки 1d")
-
-        # 📋 3. Получаем конфигурации из БД для остальных таймфреймов и стратегий
+        # 📋 1. Получаем конфигурации из БД для всех таймфреймов и стратегий
         configs = self.db.get_enabled_instrument_configs()
         if not configs:
-            self.logger.info("ℹ️ Нет активных инструментов в instrument_config (только 1d)")
+            self.logger.info("ℹ️ Нет активных инструментов в instrument_config")
             return []
 
         self.logger.info(f"📋 Обработка {len(configs)} инструментов из instrument_config...")
@@ -286,42 +257,14 @@ class Orchestrator:
 
         last_load_times: Dict[str, datetime] = {}  # Для таймера
         last_schedule_run: Dict[str, Any] = {}  # 🔥 НОВОЕ: для расписания
-        last_1d_load_time: Optional[datetime] = None  # Для загрузки 1d свечей
 
         while self.running:
             try:
-                # 📊 1. Загружаем 1d свечи для инструментов из разрешённых бирж каждые 60 минут
                 now = datetime.now(self.tz)
-                if last_1d_load_time is None or now >= last_1d_load_time + timedelta(minutes=60):
-                    all_instruments = self.db.get_all_instruments()
-                    if all_instruments:
-                        # Фильтр по биржам
-                        instruments_for_1d = [
-                            inst for inst in all_instruments
-                        ]
-                        if instruments_for_1d:
-                            self.logger.info(f"📊 Загрузка 1d свечей для {len(instruments_for_1d)} инструментов")
-                            for inst in instruments_for_1d:
-                                if not self.running:
-                                    break
-                                ticker = inst['ticker']
-                                try:
-                                    from price_loader import PriceLoader
-                                    loader = PriceLoader(
-                                        ticker=ticker, timeframe="1d",
-                                        broker=self.broker, db=self.db, logger=self.logger
-                                    )
-                                    await loader.load_incremental(history_depth_days=365)
-                                    await asyncio.sleep(0.05)
-                                except Exception as e:
-                                    self.logger.error(f"❌ Ошибка загрузки 1d для {ticker}: {e}")
-                            last_1d_load_time = now
-                        else:
-                            self.logger.debug("ℹ️ Нет инструментов из разрешённых бирж для загрузки 1d")
 
-                # 📋 2. Получаем конфигурации из БД для остальных таймфреймов и стратегий
+                # 📋 1. Получаем конфигурации из БД для всех таймфреймов и стратегий
                 configs = self.db.get_enabled_instrument_configs()
-                
+
                 to_load = []
                 for cfg in configs:
                     key = f"{cfg['ticker']}_{cfg['timeframe']}"

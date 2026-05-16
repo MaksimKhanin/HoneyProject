@@ -107,11 +107,26 @@ async def page_signals(
     # Рендерим таблицу сигналов
     signals_html = ""
     if signals:
+        # Сортируем сигналы по candle_time (от новых к старым)
+        def get_candle_time(sig):
+            ct = sig.get("candle_time")
+            if ct is None:
+                return datetime.min
+            if isinstance(ct, str):
+                try:
+                    return datetime.fromisoformat(ct.replace("Z", "+00:00"))
+                except:
+                    return datetime.min
+            return ct
+
+        signals_sorted = sorted(signals, key=get_candle_time, reverse=True)
+
         # Оставляем только последний сигнал по каждому инструменту (ticker + strategy)
         latest_signals = {}
-        for sig in signals:
+        for sig in signals_sorted:
             key = (sig.get("ticker", ""), sig.get("strategy", ""))
-            latest_signals[key] = sig  # Последняя запись перезаписывает предыдущие
+            if key not in latest_signals:  # Берём первый (самый свежий) для каждой пары
+                latest_signals[key] = sig
 
         # Преобразуем обратно в список
         signals = list(latest_signals.values())

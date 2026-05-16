@@ -31,6 +31,15 @@ class Timeframe(StrEnum):
         return [tf.value for tf in cls]
 
 
+# =============================================================================
+# ⚙️ НАСТРОЙКИ ЗАГРУЗКИ
+# =============================================================================
+
+# 🔥 Флаг для включения/отключения загрузки всех инструментов по D1 из таблицы instruments
+# Если True → загружаются 1d свечи для всех инструментов из tink.instruments (разрешённых бирж)
+# Если False → загружаются только инструменты из instrument_config (для дебага других функций)
+LOAD_ALL_INSTRUMENTS_D1: Final[bool] = False
+
 # 🎯 TIMEFRAMES: параметры загрузки + дефолты для стратегий
 # Используется: TConnector, DBManager, PriceLoader, StrategyRunner
 TIMEFRAMES: Final[dict[str, dict]] = {
