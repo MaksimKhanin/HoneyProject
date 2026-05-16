@@ -75,38 +75,47 @@ async def page_signals(
         ticker_filter: str = Query("all", description="Фильтр по тикуру"),
 ):
     """Страница последних сигналов."""
-    
+
     # Получаем уникальные тикеры для фильтра
     all_tickers = set()
     signals = []
-    
+
     try:
         # Получаем последние сигналы из БД
         signals = db.get_recent_signals(limit=limit)
         logger.info(f"📡 Получено {len(signals)} сигналов")
-        
+
         # Собираем уникальные тикеры
         for sig in signals:
             ticker = sig.get("ticker", "")
             if ticker:
                 all_tickers.add(ticker.upper())
-        
+
     except Exception as e:
         logger.error(f"❌ Ошибка получения сигналов: {e}", exc_info=True)
         signals = []
-    
+
     # Фильтр по тикуру
     if ticker_filter != "all":
         signals = [s for s in signals if s.get("ticker", "").upper() == ticker_filter.upper()]
-    
+
     # Опции для фильтра тикеров
     ticker_options = f'<option value="all" {"selected" if ticker_filter == "all" else ""}>Все тикеры</option>'
     for t in sorted(all_tickers):
         ticker_options += f'<option value="{t}" {"selected" if t == ticker_filter else ""}>{t}</option>'
-    
+
     # Рендерим таблицу сигналов
     signals_html = ""
     if signals:
+        # Оставляем только последний сигнал по каждому инструменту (ticker + strategy)
+        latest_signals = {}
+        for sig in signals:
+            key = (sig.get("ticker", ""), sig.get("strategy", ""))
+            latest_signals[key] = sig  # Последняя запись перезаписывает предыдущие
+
+        # Преобразуем обратно в список
+        signals = list(latest_signals.values())
+
         for sig in signals:
             ticker = sig.get("ticker", "N/A")
             timeframe = sig.get("timeframe", "N/A")
@@ -116,7 +125,7 @@ async def page_signals(
             candle_time = sig.get("candle_time")
             created_at = sig.get("created_at")
             metadata = sig.get("metadata", {})
-            
+
             # Парсим metadata если это строка
             if isinstance(metadata, str):
                 import json
@@ -124,18 +133,17 @@ async def page_signals(
                     metadata = json.loads(metadata)
                 except:
                     metadata = {}
-            
+
             signal_color = get_signal_color(signal)
             signal_emoji = get_signal_emoji(signal)
-            
-            # Формируем дополнительные данные из metadata
-            meta_lines = []
-            if metadata:
-                for k, v in metadata.items():
-                    if v is not None and k not in ("strategy", "window"):
-                        meta_lines.append(f"{k}: {v}")
-            meta_str = ", ".join(meta_lines[:3]) if meta_lines else ""
-            
+
+            # Формируем полный JSON для метаданных
+            import json
+            metadata_json = json.dumps(metadata, ensure_ascii=False, indent=2) if metadata else "{}"
+
+            # Уникальный ID для спойлера
+            spoiler_id = f"meta_{ticker}_{strategy}".replace("-", "_").replace(".", "_").replace(" ", "_")
+
             signals_html += f'''
             <tr style="border-bottom:1px solid #333;">
                 <td style="padding:8px;"><strong>{ticker}</strong><br><small style="color:#777">{timeframe}</small></td>
@@ -146,12 +154,17 @@ async def page_signals(
                 <td style="padding:8px;text-align:right;">{fmt(price, ",.4f")}</td>
                 <td style="padding:8px;text-align:center;">{fmt_datetime(candle_time)}</td>
                 <td style="padding:8px;text-align:center;">{fmt_datetime(created_at)}</td>
-                <td style="padding:8px;font-size:0.8em;color:#aaa;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{meta_str}</td>
+                <td style="padding:8px;font-size:0.8em;">
+                    <details style="cursor:pointer;">
+                        <summary style="color:#aaa;font-size:0.85em;">📄 Показать метаданные</summary>
+                        <pre style="background:#1a1a1a;padding:8px;border-radius:4px;overflow-x:auto;font-size:0.75em;color:#0f0;margin-top:5px;">{metadata_json}</pre>
+                    </details>
+                </td>
             </tr>
             '''
     else:
         signals_html = '<tr><td colspan="7" style="text-align:center;color:#777;padding:20px;">Нет сигналов за выбранный период</td></tr>'
-    
+
     # ===== HTML СТРАНИЦЫ =====
     html = f"""<!DOCTYPE html>
 <html lang="ru">
