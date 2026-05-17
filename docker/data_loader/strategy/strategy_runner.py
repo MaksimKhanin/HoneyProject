@@ -104,6 +104,7 @@ class StrategyRunner:
         }
 
     def _resolve_strategy_class(self) -> Type[BaseStrategy]:
+        """Фабрика: возвращает класс стратегии по имени."""
         # 🔥 Здесь регистрируешь новые стратегии
         from strategy.strategies.trailing_trend import TrailingTrendStrategy
         from strategy.strategies.trend_hunter import TrendHunterStrategy
@@ -245,6 +246,11 @@ class StrategyRunner:
             # 🔥 Формируем metadata из релевантных метрик стратегии + системных данных
             strategy_metrics = notification_context or {}
 
+            # 🔥 5.1 Обновляем метрики в БД актуальными значениями из стратегии
+            # Это гарантирует, что в tink.metrics всегда свежие данные, которые использовала стратегия
+            if strategy_metrics:
+                self._update_metrics_in_db(last_bar, strategy_metrics)
+
             saved = self.db.save_signal(
                 ticker=self.ticker,
                 timeframe=self.timeframe,
@@ -343,3 +349,52 @@ class StrategyRunner:
         except Exception as e:
             self.logger.warning(f"⚠️ Ошибка запроса позиций у брокера {self.ticker}: {e}", exc_info=True)
             return None
+
+    def _update_metrics_in_db(self, bar: Bar, strategy_metrics: Dict[str, Any]):
+        """
+        Обновляет метрики в таблице tink.metrics актуальными значениями из стратегии.
+
+        Проблема: MetricsEngine рассчитывает метрики на основе свечей, но не знает о внутренних
+        метриках стратегии (например, Cooldown, Pullback и т.д.), которые вычисляются в on_bar().
+
+        Решение: После расчёта сигнала берём релевантные метрики из стратегии и обновляем
+        запись в tink.metrics за эту же candle_time, сливая с существующими данными.
+
+        :param bar: текущий бар
+        :param strategy_metrics: dict с метриками из get_notification_context()
+        """
+        # Фильтруем только числовые метрики (PnL, Entry, SL и т.д. - строки, их не сохраняем в metrics)
+        numeric_metrics = {
+            k: v for k, v in strategy_metrics.items()
+            if isinstance(v, (int, float))
+        }
+
+        if not numeric_metrics:
+            self.logger.debug(f"⚠️ Нет числовых метрик для обновления в БД: {list(strategy_metrics.keys())}")
+            return
+
+        try:
+            # Получаем текущие метрики из БД (если есть)
+            existing_metrics_list = self.db.get_latest_metrics(self.ticker, self.timeframe, limit=1)
+            existing_metrics = {}
+            if existing_metrics_list:
+                existing_metrics = existing_metrics_list[0].get('metrics', {}) or {}
+
+            # Сливаем: существующие + новые метрики стратегии (новые перезаписывают старые)
+            merged_metrics = {**existing_metrics, **numeric_metrics}
+
+            # Сохраняем обратно в БД
+            self.db.save_metrics(
+                ticker=self.ticker,
+                timeframe=self.timeframe,
+                candle_time=bar.time,
+                metrics=merged_metrics
+            )
+
+            self.logger.info(
+                f"✅ Метрики обновлены в БД для {self.ticker}/{self.timeframe}@{bar.time}: "
+                f"{len(numeric_metrics)} полей ({list(numeric_metrics.keys())})"
+            )
+
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка обновления метрик в БД: {e}", exc_info=True)

@@ -124,9 +124,9 @@ class TrailingTrendStrategy(BaseStrategy):
     def _get_relevant_metrics(self, bar: Bar) -> Dict[str, Any]:
         """Возвращает только те метрики, которые реально используются в логике."""
         return {
-            "EMA_50": round(self._get_metric(bar, "ema_50"), 2),
-            "Pullback_20": f"{self._get_metric(bar, 'pullback_20') * 100:.2f}%",
-            "Kurtosis_200": self._get_metric(bar, "kurt_excess_200", 0),
-            "Skewness_200": self._get_metric(bar, "skew_200", 0),
-            "Cooldown": f"{self.cooldown_bars - self.bars_since_exit} bars left" if not self.in_position else None
+            "EMA_50": round(self._get_metric(bar, "ema_50", 0), 2),
+            "Pullback_20": round(self._get_metric(bar, 'pullback_20', 1.0), 4),
+            "Kurtosis_200": round(self._get_metric(bar, "kurt_excess_200", 0), 2),
+            "Skewness_200": round(self._get_metric(bar, "skew_200", 0), 2),
+            "Cooldown": self.cooldown_bars - self.bars_since_exit if not self.in_position else 0
         }
