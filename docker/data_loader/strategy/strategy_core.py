@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 import logging
 
 
@@ -53,7 +53,7 @@ class BaseStrategy(ABC):
 
     Правила:
     1. Состояние хранится ВНУТРИ стратегии (никаких глобалов)
-    2. Метрики читаются из bar.metrics (подгружаются из БД)
+    2. Метрики читаются из bar.metrics (подгружаются из БД) ИЛИ рассчитываются онлайн
     3. Сигналы возвращаются как Signal enum
     4. Pure Python, no pandas/numpy в production
 
@@ -95,6 +95,10 @@ class BaseStrategy(ABC):
         self.logger = logging.getLogger(f"Strategy.{self.name}")
         self._reset_state()
 
+        # 🔥 Онлайн-калькулятор метрик (ленивая инициализация)
+        self._metric_instances: Dict[str, Any] = {}  # Кэш экземпляров метрик
+        self._bar_history: List[Bar] = []
+
     def _reset_state(self):
         """Сброс состояния после закрытия позиции."""
         self.in_position = False
@@ -103,6 +107,72 @@ class BaseStrategy(ABC):
         self.current_sl = 0.0
         self.last_exit_ts = 0.0  # timestamp последнего выхода
         self._bar_count = 0
+
+    def set_bar_history(self, bars: List[Bar]):
+        """
+        Устанавливает историю баров для онлайн-расчёта метрик.
+        Вызывается перед on_bar() в strategy_runner.
+
+        :param bars: Список баров (история + текущий)
+        """
+        self._bar_history = bars
+        self._metric_instances.clear()  # Сброс кэша при новой истории
+
+    def _get_metric_online(self, key: str, default: float = 0.0) -> float:
+        """
+        Рассчитывает метрику онлайн на основе истории баров.
+        Использует классы метрик из docker/data_loader/metrics/builtins/python_metrics.py
+
+        :param key: Ключ метрики в формате "{name}_{period}" (например, "ema_60" или "zscore_200")
+        :param default: Значение по умолчанию
+        :return: Рассчитанное значение метрики
+        """
+        try:
+            import pandas as pd
+            from metrics.registry import get_metric
+        except ImportError:
+            return default
+
+        # Парсим ключ: "ema_60" -> name="ema", period=60
+        parts = key.rsplit('_', 1)
+        if len(parts) != 2:
+            return default
+
+        metric_name, period_str = parts
+        try:
+            period = int(period_str)
+        except ValueError:
+            return default
+
+        # Формируем имя шаблона метрики (например, "ema_60" ищет шаблон "ema_{period}")
+        template_name = f"{metric_name}_{{period}}"
+
+        try:
+            # Получаем экземпляр метрики через реестр
+            metric_instance = get_metric(template_name, period=period)
+        except KeyError:
+            return default
+
+        # Конвертируем бары в DataFrame
+        if len(self._bar_history) < metric_instance.min_candles:
+            return default
+
+        data = {
+            'open': [b.open for b in self._bar_history],
+            'high': [b.high for b in self._bar_history],
+            'low': [b.low for b in self._bar_history],
+            'close': [b.close for b in self._bar_history],
+            'volume': [b.volume for b in self._bar_history],
+        }
+        df = pd.DataFrame(data)
+
+        # Рассчитываем метрику
+        result = metric_instance.calculate_pandas(df)
+
+        if not result or key not in result:
+            return default
+
+        return result[key]
 
     @abstractmethod
     def on_bar(self, bar: Bar) -> Signal:
@@ -117,11 +187,19 @@ class BaseStrategy(ABC):
     # ===== Утилиты =====
 
     def _get_metric(self, bar: Bar, key: str, default: float = 0.0) -> float:
-        """Безопасное чтение метрики из bar.metrics."""
-        if not bar.metrics:
-            return default
-        val = bar.metrics.get(key)
-        return val if val is not None else default
+        """
+        Безопасное чтение метрики из bar.metrics.
+        Если метрика не найдена в bar.metrics, пытается рассчитать онлайн.
+        """
+        if bar.metrics and key in bar.metrics:
+            val = bar.metrics.get(key)
+            return val if val is not None else default
+
+        # 🔥 Фолбэк на онлайн-расчёт если метрика не найдена в БД
+
+        self.logger.info("Сработал Фолбэк на онлайн-расчёт если метрика не найдена в БД")
+
+        return self._get_metric_online(key, default)
 
     def _can_enter_long(self) -> bool:
         """Проверка: разрешён ли вход в лонг."""

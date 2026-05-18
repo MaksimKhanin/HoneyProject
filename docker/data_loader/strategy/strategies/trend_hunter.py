@@ -1,4 +1,3 @@
-
 # strategies/trend_hunter.py
 from strategy.strategy_core import BaseStrategy, Bar, Signal
 from typing import Dict, Optional, Any
@@ -89,10 +88,10 @@ class TrendHunterStrategy(BaseStrategy):
         return self._manage_position(bar)
 
     def _try_enter(self, bar: Bar) -> Signal:
-        # Чтение метрик
+        # Чтение метрик (онлайн-расчёт через _get_metric если нет в БД)
         ema_slow = self._get_metric(bar, f"ema_{self.period_slow}", 0)
         ema_fast = self._get_metric(bar, f"ema_{self.period_fast}", 0)
-        z_score = self._get_metric(bar, f"zscore_{self.period_slow}", 0)
+        z_score = self._get_metric(bar, f"z_score_{self.period_slow}", 0)
         vol_ratio = self._get_metric(bar, f"vol_ratio_{self.period_fast}", 1.0)
         mov_min = self._get_metric(bar, f"mov_min_{self.period_fast}", bar.low)
         mov_max = self._get_metric(bar, f"mov_max_{self.period_fast}", bar.high)
@@ -148,8 +147,8 @@ class TrendHunterStrategy(BaseStrategy):
             else:
                 self.current_sl = self.entry_price * (1 + self.risk_prcnt)
 
-        # Чтение метрик
-        z_score = self._get_metric(bar, f"zscore_{self.period_slow}", 0)
+        # Чтение метрик (онлайн-расчёт через _get_metric если нет в БД)
+        z_score = self._get_metric(bar, f"z_score_{self.period_slow}", 0)
         mov_min = self._get_metric(bar, f"mov_min_{self.period_fast}", bar.low)
         mov_max = self._get_metric(bar, f"mov_max_{self.period_fast}", bar.high)
 
@@ -220,12 +219,19 @@ class TrendHunterStrategy(BaseStrategy):
 
     def _get_relevant_metrics(self, bar: Bar) -> Dict[str, Any]:
         """Возвращает только те метрики, которые реально используются в логике."""
-        return {
+
+
+
+        ctx = {
             f"EMA_{self.period_slow}": round(self._get_metric(bar, f"ema_{self.period_slow}", 0), 2),
             f"EMA_{self.period_fast}": round(self._get_metric(bar, f"ema_{self.period_fast}", 0), 2),
-            f"Z-Score_{self.period_slow}": round(self._get_metric(bar, f"zscore_{self.period_slow}", 0), 2),
+            f"Z-Score_{self.period_slow}": round(self._get_metric(bar, f"z_score_{self.period_slow}", 0), 2),
             f"VolRatio_{self.period_fast}": round(self._get_metric(bar, f"vol_ratio_{self.period_fast}", 1.0), 2),
             "TrailingMode": "ON" if self.trailing_mode else "OFF",
             "MomentumFlg": "YES" if self.momentum_flg else "NO",
             "Cooldown": f"{self.cooldown_bars - self.bars_since_exit} bars left" if not self.in_position else None
         }
+
+        self.logger.info(f"_get_relevant_metrics returns  {ctx}")
+
+        return ctx

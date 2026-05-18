@@ -170,9 +170,10 @@ class StrategyRunner:
         """
         Запуск стратегии.
         1. Загружает бары + метрики из БД.
-        2. Прогоняет последний бар через стратегию.
-        3. Исполняет сигнал через LiveExecutor.
-        4. Сохраняет результат в БД.
+        2. Устанавливает историю баров в стратегию для онлайн-расчёта метрик.
+        3. Прогоняет последний бар через стратегию.
+        4. Исполняет сигнал через LiveExecutor.
+        5. Сохраняет результат в БД.
         """
         self.logger.info(f"🧠 Запуск стратегии: {self.strategy_name} (mode={self.executor.mode.value})")
 
@@ -189,6 +190,9 @@ class StrategyRunner:
             # 🔥 2. Создаём экземпляр стратегии, если ещё не создан
             if not self._strategy_instance:
                 self.configure()  # Вызовет _resolve_strategy_class и создаст экземпляр
+
+            # 🔥 2.1 Устанавливаем историю баров для онлайн-расчёта метрик
+            self._strategy_instance.set_bar_history(bars)
 
             # 🔥 3. Прогоняем ПОСЛЕДНИЙ бар через стратегию
             last_bar = bars[-1]
@@ -221,6 +225,9 @@ class StrategyRunner:
 
             # 🔥 Стратегия сама собирает данные для уведомления (метрики + P&L)
             notification_context = self._strategy_instance.get_notification_context(last_bar)
+
+
+            self.logger.debug(f"notification_context = {notification_context}")
 
             # 🔥 Исполнение
             exec_result = await self.executor.execute(
@@ -363,11 +370,17 @@ class StrategyRunner:
         :param bar: текущий бар
         :param strategy_metrics: dict с метриками из get_notification_context()
         """
+
+        self.logger.debug(
+            f"_update_metrics_in_db -> strategy_metrics = {strategy_metrics}")
+
         # Фильтруем только числовые метрики (PnL, Entry, SL и т.д. - строки, их не сохраняем в metrics)
         numeric_metrics = {
             k: v for k, v in strategy_metrics.items()
             if isinstance(v, (int, float))
         }
+
+
 
         if not numeric_metrics:
             self.logger.debug(f"⚠️ Нет числовых метрик для обновления в БД: {list(strategy_metrics.keys())}")
