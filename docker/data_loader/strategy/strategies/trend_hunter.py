@@ -54,8 +54,8 @@ class TrendHunterStrategy(BaseStrategy):
         },
     }
 
-    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL"):
-        super().__init__(params, direction)
+    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL", log_level: str = None):
+        super().__init__(params, direction, log_level)
 
         # 🔥 Инициализация параметров
         self.period_slow = self.params.get("period_slow", 60)
@@ -220,7 +220,7 @@ class TrendHunterStrategy(BaseStrategy):
     def _get_relevant_metrics(self, bar: Bar) -> Dict[str, Any]:
         """Возвращает только те метрики, которые реально используются в логике."""
 
-
+        self.logger.info(f"🔍 _get_relevant_metrics вызван для {bar.time if bar else 'None'}")
 
         ctx = {
             f"EMA_{self.period_slow}": round(self._get_metric(bar, f"ema_{self.period_slow}", 0), 2),

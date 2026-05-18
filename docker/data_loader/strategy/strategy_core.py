@@ -6,6 +6,9 @@ from enum import Enum
 from typing import Dict, Optional, Any, List
 import logging
 
+import pandas as pd
+from metrics.registry import get_metric
+
 
 class Signal(str, Enum):
     """
@@ -81,10 +84,11 @@ class BaseStrategy(ABC):
     name: str = "BaseStrategy"
     _params_schema: Dict[str, Dict] = {}  # 🔥 Опциональный атрибут для UI
 
-    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL"):
+    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL", log_level: str = None):
         """
         :param params: Словарь параметров стратегии
         :param direction: "BUY_ONLY" | "SHORT_ONLY" | "ALL"
+        :param log_level: Уровень логирования (из env или default)
         """
         self.params = params or {}
         self.direction = direction
@@ -92,7 +96,19 @@ class BaseStrategy(ABC):
         if self.direction not in ("BUY_ONLY", "SHORT_ONLY", "ALL"):
             raise ValueError(f"Invalid direction: {self.direction}")
 
+        # 🔥 Получаем уровень логирования из параметра или из env (как в main_loader.py)
+        import os
+        self.log_level = log_level or os.getenv("LOG_LEVEL", "INFO")
+
         self.logger = logging.getLogger(f"Strategy.{self.name}")
+        self.logger.setLevel(getattr(logging, self.log_level.upper()))
+
+        # 🔥 Добавляем хендлер, если их нет (чтобы логи шли в консоль и файл)
+        if not self.logger.handlers:
+            from logger import setup_logger
+            shared_logger = setup_logger(f"Strategy.{self.name}", level=self.log_level)
+            self.logger.handlers = shared_logger.handlers
+
         self._reset_state()
 
         # 🔥 Онлайн-калькулятор метрик (ленивая инициализация)
@@ -127,34 +143,24 @@ class BaseStrategy(ABC):
         :param default: Значение по умолчанию
         :return: Рассчитанное значение метрики
         """
-        try:
-            import pandas as pd
-            from metrics.registry import get_metric
-        except ImportError:
-            return default
+
 
         # Парсим ключ: "ema_60" -> name="ema", period=60
         parts = key.rsplit('_', 1)
-        if len(parts) != 2:
-            return default
+        self.logger.debug(f"parts: {parts}")
 
         metric_name, period_str = parts
-        try:
-            period = int(period_str)
-        except ValueError:
-            return default
+
+        period = int(period_str)
 
         # Формируем имя шаблона метрики (например, "ema_60" ищет шаблон "ema_{period}")
         template_name = f"{metric_name}_{{period}}"
 
-        try:
-            # Получаем экземпляр метрики через реестр
-            metric_instance = get_metric(template_name, period=period)
-        except KeyError:
-            return default
+        metric_instance = get_metric(template_name, period=period)
 
         # Конвертируем бары в DataFrame
         if len(self._bar_history) < metric_instance.min_candles:
+            self.logger.warning(f"Для расчета {template_name} не хватило баров {len(self._bar_history)} < {metric_instance.min_candles}. Возвращаем дефолтное значение - {default}")
             return default
 
         data = {
@@ -169,8 +175,7 @@ class BaseStrategy(ABC):
         # Рассчитываем метрику
         result = metric_instance.calculate_pandas(df)
 
-        if not result or key not in result:
-            return default
+        self.logger.debug(f"Итогавая рассчитанная метрика: {result[key]}")
 
         return result[key]
 
@@ -191,13 +196,15 @@ class BaseStrategy(ABC):
         Безопасное чтение метрики из bar.metrics.
         Если метрика не найдена в bar.metrics, пытается рассчитать онлайн.
         """
+        self.logger.debug(f"🔍 _get_metric: key={key}, bar.metrics={bar.metrics}")
+
         if bar.metrics and key in bar.metrics:
             val = bar.metrics.get(key)
+            self.logger.debug(f"✅ Метрика {key} найдена в БД: {val}")
             return val if val is not None else default
 
         # 🔥 Фолбэк на онлайн-расчёт если метрика не найдена в БД
-
-        self.logger.info("Сработал Фолбэк на онлайн-расчёт если метрика не найдена в БД")
+        self.logger.debug(f"⚠️ Сработал Фолбэк на онлайн-расчёт для {key} (не найдена в БД)")
 
         return self._get_metric_online(key, default)
 

@@ -11,6 +11,7 @@
 
 import asyncio
 import json
+import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Type
 
@@ -151,9 +152,17 @@ class StrategyRunner:
 
         # Пересоздаём экземпляр стратегии с обновлёнными параметрами
         if self._strategy_class:
+            # 🔥 Получаем уровень логирования из logger или env
+            log_level = "INFO"
+            if self.logger:
+                log_level = logging.getLevelName(self.logger.level)
+                if not isinstance(log_level, str):
+                    log_level = "INFO"
+
             self._strategy_instance = self._strategy_class(
                 params=self.strategy_params,
-                direction=self.direction
+                direction=self.direction,
+                log_level=log_level
             )
 
         self.logger.debug(

@@ -38,8 +38,8 @@ class TrailingTrendStrategy(BaseStrategy):
         },
     }
 
-    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL"):
-        super().__init__(params, direction)
+    def __init__(self, params: Optional[Dict] = None, direction: str = "ALL", log_level: str = None):
+        super().__init__(params, direction, log_level)
 
         # 🔥 Инициализация параметров
         self.min_pullback = self.params.get("min_pullback", 0.03)
