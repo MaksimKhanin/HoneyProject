@@ -18,7 +18,7 @@ from logger import setup_logger
 from constants import (
     Timeframe, StrategyName, SignalType,
     DEFAULT_LOG_LEVEL, DEFAULT_TIMEZONE,
-    TIMEFRAMES
+    TIMEFRAMES, METRICS_REGISTRY
 )
 from db_manager import DBManager
 from T_con import TConnector
@@ -181,10 +181,11 @@ class Orchestrator:
             result["load_ok"] = load_result.get("success", False)
             result["candles_saved"] = load_result.get("candles_saved", 0)
 
-            # 📊 1.5. Расчёт метрик (без изменений)
+            # 📊 1.5. Расчёт метрик (по реестру из constants.py)
             if result["load_ok"]:
                 from metrics.engine import MetricsEngine
-                engine = MetricsEngine(db=self.db, metric_names=None)
+                # 🔥 Используем METRICS_REGISTRY вместо None (все метрики)
+                engine = MetricsEngine(db=self.db, metric_names=METRICS_REGISTRY)
                 candles_for_metrics = self.db.get_recent_candles(ticker, timeframe,
                                                                  limit=engine.recommended_fetch_limit)
                 candles_for_metrics = list(reversed(candles_for_metrics))

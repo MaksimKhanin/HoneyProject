@@ -1,4 +1,3 @@
-# core/constants.py
 """
 🎯 ЕДИНЫЙ РЕЕСТР КОНСТАНТ ПРОЕКТА
 Версия 2.0: + настройки загрузки и стратегий
@@ -212,6 +211,42 @@ EXCHANGES_FOR_1D: Final[list[str]] = [
     "NYSE",      # New York Stock Exchange
     "LSE",       # London Stock Exchange
     "EURONEXT",  # Euronext
+]
+
+# =============================================================================
+# 📊 РЕЕСТР МЕТРИК ДЛЯ РАСЧЁТА
+# =============================================================================
+
+# 🔥 Реестр метрик, которые будут рассчитываться в main_loader
+# Формат: {"name": "<имя_метрики>", "params": {<параметры>}}
+# Примеры:
+#   {"name": "rsi_{period}", "params": {"period": 14}}
+#   {"name": "pullback_{window}", "params": {"window": 20}}
+#   {"name": "close_price", "params": {}}  # Метрики без параметров
+
+METRICS_REGISTRY: Final[list[dict]] = [
+    # Базовые метрики
+    {"name": "close_price", "params": {}},
+
+    # RSI с разными периодами
+    # {"name": "rsi_{period}", "params": {"period": 14}},
+    # {"name": "rsi_{period}", "params": {"period": 21}},
+
+    # Изменение цены
+    {"name": "price_change_pct_{period}", "params": {"period": 3}},
+    {"name": "price_change_pct_{period}", "params": {"period": 5}},
+
+    # Откат от максимума
+    {"name": "pullback_{window}", "params": {"window": 20}},
+    {"name": "pullback_{window}", "params": {"window": 50}},
+
+    # EMA
+    {"name": "ema_{period}", "params": {"period": 21}},
+    {"name": "ema_{period}", "params": {"period": 50}},
+
+    # Статистические метрики
+    {"name": "z_score_{period}", "params": {"period": 200}},
+    {"name": "skew_kurt_{period}", "params": {"period": 200}},
 ]
 
 # =============================================================================

@@ -256,7 +256,7 @@ async def page_portfolio(
                     <div>
                         <div style="color:#aaa;font-size:0.9em;margin-bottom:6px;">⚠️ Изменение</div>
                         <div style="font-size:1.3em;font-weight:bold;line-height:1.3;color:{"#0f0" if (metrics_data.get("price_change_pct_3") or 0) >= 0 else "#f44"}">
-                            {fmt(metrics_data.get("price_change_pct_5"), "+.2f")}%</div>
+                            {fmt(metrics_data.get("price_change_pct_3"), "+.2f")}%</div>
                     </div>
                     <div>
                         <div style="color:#aaa;font-size:0.9em;margin-bottom:6px;">〰️ Z-Score</div>

@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 from .registry import get_metric, list_metrics
@@ -24,14 +24,47 @@ class MetricsEngine:
     # 🔥 Класс-переменная для ограничения памяти (настраивается глобально)
     MAX_CANDLES_CACHE: int = 2000
 
-    def __init__(self, db, metric_names: Optional[List[str]] = None):
+    def __init__(self, db, metric_names: Optional[List[Union[str, Dict[str, Any]]]] = None):
         """
         :param db: экземпляр DBManager
-        :param metric_names: список имён метрик для расчёта (None = все)
+        :param metric_names: список имён метрик для расчёта (None = все из реестра)
+
+        Формат metric_names:
+            - List[str]: ["rsi_14", "close_price"] — простые имена
+            - List[Dict]: [{"name": "rsi_{period}", "params": {"period": 14}}, ...] — с параметрами
+            - None: все метрики из METRICS_REGISTRY в constants.py
         """
         self.db = db
-        self.metric_names = metric_names or list_metrics()
-        self.metrics = [get_metric(name) for name in self.metric_names]
+
+        # 🔥 Импортируем METRICS_REGISTRY только если metric_names=None
+        if metric_names is None:
+            from constants import METRICS_REGISTRY
+            self.metric_configs = METRICS_REGISTRY
+        else:
+            # Нормализуем входные данные: строки превращаем в dict с пустыми params
+            self.metric_configs = []
+            for item in metric_names:
+                if isinstance(item, str):
+                    self.metric_configs.append({"name": item, "params": {}})
+                elif isinstance(item, dict):
+                    # Копируем, чтобы не мутировать исходный конфиг
+                    self.metric_configs.append({
+                        "name": item.get("name"),
+                        "params": item.get("params", {})
+                    })
+                else:
+                    logger.warning(f"⚠️ Неверный формат метрики: {item}, пропускаем")
+
+        # 🔥 Создаём экземпляры метрик с параметрами
+        self.metrics = []
+        for config in self.metric_configs:
+            try:
+                name = config["name"]
+                params = config.get("params", {})
+                metric = get_metric(name, **params)
+                self.metrics.append(metric)
+            except Exception as e:
+                logger.error(f"❌ Не удалось создать метрику {config}: {e}", exc_info=True)
 
         # 🔥 ВЫЧИСЛЯЕМ, сколько свечей нужно минимум
         # Это ключевая строка — без неё recommended_fetch_limit упадёт!
