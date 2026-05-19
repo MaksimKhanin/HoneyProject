@@ -171,6 +171,68 @@ class StrategyRunner:
             f"params={self.strategy_params}"
         )
 
+    def _get_required_history_length(self) -> int:
+        """
+        Вычисляет минимально необходимую длину истории баров для расчёта всех метрик,
+        используемых в стратегии.
+
+        :return: необходимое количество баров
+        """
+        # Собираем все ключи метрик, которые могут использоваться в стратегии
+        # На основе параметров стратегии формируем список требуемых периодов
+        required_periods = []
+
+        # 🔥 Берём периоды из strategy_params (а не из атрибутов self)
+        period_slow = self.strategy_params.get('period_slow')
+        period_fast = self.strategy_params.get('period_fast')
+
+        # EMA метрики
+        if period_slow:
+            required_periods.append(('ema', period_slow))
+        if period_fast:
+            required_periods.append(('ema', period_fast))
+
+        # Z-Score метрики
+        if period_slow:
+            required_periods.append(('z_score', period_slow))
+
+        # Vol Ratio метрики
+        if period_fast:
+            required_periods.append(('vol_ratio', period_fast))
+
+        # Mov Min/Max метрики
+        if period_fast:
+            required_periods.append(('mov_min', period_fast))
+            required_periods.append(('mov_max', period_fast))
+
+        # Вычисляем min_candles для каждой метрики
+        min_bars_needed = 0
+        for metric_name, period in required_periods:
+            if metric_name == 'ema':
+                # EMAMetric.min_candles = period * 2
+                bars_needed = period * 2
+            elif metric_name == 'z_score':
+                # ZScoreMetric.min_candles = max(100, period + 40)
+                bars_needed = max(100, period + 40)
+            elif metric_name in ('vol_ratio',):
+                # VolumeRatioMetric.min_candles = period + 1
+                bars_needed = period + 1
+            elif metric_name in ('mov_min', 'mov_max', 'pullback'):
+                # MovMin/MovMax/Pullback Metric.min_candles = period
+                bars_needed = period
+            else:
+                bars_needed = 10  # дефолтное значение
+
+            min_bars_needed = max(min_bars_needed, bars_needed)
+            self.logger.debug(f"Метрика {metric_name}_{period} требует {bars_needed} баров")
+
+        # Добавляем буфер для надёжности
+        buffer = 20
+        total_needed = min_bars_needed + buffer
+
+        self.logger.info(f"📊 Требуемая длина истории: {min_bars_needed} + {buffer} = {total_needed} баров")
+        return total_needed
+
     async def run(
             self,
             prices: Optional[List[float]] = None,  # Оставлен для совместимости, но игнорируется
@@ -187,20 +249,26 @@ class StrategyRunner:
         self.logger.info(f"🧠 Запуск стратегии: {self.strategy_name} (mode={self.executor.mode.value})")
 
         try:
-            # 🔥 1. Получаем бары с метриками (вместо голых цен)
+            # 🔥 1. Создаём экземпляр стратегии с параметрами (чтобы strategy_params был заполнен)
+            if not self._strategy_instance:
+                self.configure()  # Вызовет _resolve_strategy_class и создаст экземпляр
+
+            # 🔥 2. Вычисляем необходимую глубину истории на основе параметров стратегии
+            required_history = self._get_required_history_length()
+
+            self.logger.info(f"📊 Запрос истории: требуется {required_history} баров для расчёта всех метрик")
+
+            # 🔥 3. Получаем бары с метриками (вместо голых цен)
             bars = MetricsJoiner.fetch_and_join(
                 self.db, self.ticker, self.timeframe,
-                limit=self.strategy_window + 20  # Буфер для расчётов
+                limit=required_history  # Динамический лимит вместо strategy_window + 20
             )
+            self.logger.info(f"📥 Получено баров из БД: {len(bars)} (запрошено {required_history})")
             if len(bars) < self.strategy_window:
                 self.logger.debug(f"⏳ Недостаточно данных: {len(bars)} < {self.strategy_window}")
                 return {**self.stats, "success": True, "skipped": "insufficient_data"}
 
-            # 🔥 2. Создаём экземпляр стратегии, если ещё не создан
-            if not self._strategy_instance:
-                self.configure()  # Вызовет _resolve_strategy_class и создаст экземпляр
-
-            # 🔥 2.1 Устанавливаем историю баров для онлайн-расчёта метрик
+            # 🔥 4. Устанавливаем историю баров для онлайн-расчёта метрик
             self._strategy_instance.set_bar_history(bars)
 
             # 🔥 3. Прогоняем ПОСЛЕДНИЙ бар через стратегию
